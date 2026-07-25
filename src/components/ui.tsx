@@ -4,16 +4,18 @@ import type { ReactNode } from "react";
 
 export function Logo({ small = false }: { small?: boolean }) {
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex items-center gap-2">
       <span
         aria-hidden
-        className={`grid place-items-center rounded-xl bg-mint/15 ring-1 ring-mint/30 ${
-          small ? "size-8 text-base" : "size-10 text-xl"
+        className={`grid place-items-center rounded-2xl border-2 border-ink bg-butter shadow-sticker ${
+          small ? "size-9 text-lg" : "size-11 text-2xl"
         }`}
       >
-        💬
+        🐣
       </span>
-      <span className={`font-semibold tracking-tight ${small ? "text-lg" : "text-2xl"}`}>
+      <span
+        className={`font-display font-semibold ${small ? "text-xl" : "text-3xl"}`}
+      >
         Yap
       </span>
     </div>
@@ -23,25 +25,19 @@ export function Logo({ small = false }: { small?: boolean }) {
 export function Card({
   children,
   className = "",
-  accent,
+  tint,
 }: {
   children: ReactNode;
   className?: string;
-  accent?: string;
+  /** Tailwind bg class for a soft coloured card, e.g. "bg-butter-soft". */
+  tint?: string;
 }) {
   return (
     <section
-      className={`relative overflow-hidden rounded-2xl border border-line bg-surface/70 backdrop-blur-sm ${className}`}
+      className={`rounded-blob border-2 border-line-strong ${
+        tint ?? "bg-paper"
+      } shadow-sticker ${className}`}
     >
-      {accent ? (
-        <span
-          aria-hidden
-          className="absolute inset-x-0 top-0 h-px"
-          style={{
-            background: `linear-gradient(90deg, transparent, ${accent}, transparent)`,
-          }}
-        />
-      ) : null}
       {children}
     </section>
   );
@@ -50,18 +46,18 @@ export function Card({
 export function SectionLabel({
   step,
   children,
-  color = "var(--color-mint)",
+  color = "bg-grass-soft text-grass-ink",
 }: {
   step?: number;
   children: ReactNode;
+  /** Tailwind bg + text classes for the step chip. */
   color?: string;
 }) {
   return (
-    <h3 className="flex items-center gap-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+    <h3 className="flex items-center gap-2 font-display text-base font-semibold text-ink">
       {step !== undefined ? (
         <span
-          className="grid size-5 place-items-center rounded-md text-[11px] font-bold"
-          style={{ background: `color-mix(in srgb, ${color} 18%, transparent)`, color }}
+          className={`grid size-6 shrink-0 place-items-center rounded-full text-xs font-bold ${color}`}
         >
           {step}
         </span>
@@ -87,13 +83,14 @@ export function Button({
   className?: string;
 }) {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mint";
+    "inline-flex items-center justify-center gap-2 rounded-full font-display font-semibold transition-all duration-100 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-lilac disabled:cursor-not-allowed";
   const styles = {
     primary:
-      "bg-mint text-ink hover:bg-mint/90 active:scale-[0.98] shadow-[0_0_0_1px_rgba(94,234,212,0.25),0_8px_24px_-12px_rgba(94,234,212,0.6)]",
+      "border-2 border-ink bg-grass px-5 py-2.5 text-paper shadow-[0_4px_0_0_var(--color-grass-ink)] hover:brightness-105 active:translate-y-[3px] active:shadow-[0_1px_0_0_var(--color-grass-ink)] disabled:border-line-strong disabled:bg-line disabled:text-faint disabled:shadow-[0_4px_0_0_var(--color-line-strong)]",
     ghost:
-      "border border-line bg-surface-2 text-fg hover:border-line/80 hover:bg-surface-2/70 active:scale-[0.98]",
-    quiet: "text-muted hover:text-fg",
+      "border-2 border-line-strong bg-paper px-5 py-2.5 text-ink shadow-sticker hover:bg-cream active:translate-y-[2px] active:shadow-none disabled:opacity-50",
+    quiet:
+      "px-3 py-2 text-sm text-muted underline decoration-line-strong decoration-2 underline-offset-4 hover:text-ink disabled:opacity-50",
   }[variant];
 
   return (
@@ -110,20 +107,21 @@ export function Button({
 
 export function Pill({
   children,
-  tone = "mint",
+  tone = "grass",
 }: {
   children: ReactNode;
-  tone?: "mint" | "amber" | "violet" | "muted";
+  tone?: "grass" | "coral" | "lilac" | "butter" | "plain";
 }) {
   const tones = {
-    mint: "bg-mint/12 text-mint ring-mint/25",
-    amber: "bg-amber/12 text-amber ring-amber/25",
-    violet: "bg-violet/12 text-violet ring-violet/25",
-    muted: "bg-white/5 text-muted ring-white/10",
+    grass: "bg-grass-soft text-grass-ink border-grass/30",
+    coral: "bg-coral-soft text-coral-ink border-coral/30",
+    lilac: "bg-lilac-soft text-lilac-ink border-lilac/30",
+    butter: "bg-butter-soft text-butter-ink border-butter/50",
+    plain: "bg-cream text-muted border-line-strong",
   }[tone];
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${tones}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1 text-sm font-semibold ${tones}`}
     >
       {children}
     </span>
@@ -132,13 +130,13 @@ export function Pill({
 
 export function Thinking({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3 text-sm text-muted">
+    <div className="flex items-center gap-2.5 text-sm font-semibold text-muted">
       <span className="flex gap-1">
         {[0, 1, 2].map((i) => (
           <span
             key={i}
-            className="size-1.5 rounded-full bg-mint animate-breathe"
-            style={{ animationDelay: `${i * 0.18}s` }}
+            className="size-2 rounded-full bg-grass animate-bounce-dot"
+            style={{ animationDelay: `${i * 0.15}s` }}
           />
         ))}
       </span>

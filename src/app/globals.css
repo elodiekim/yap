@@ -1,66 +1,94 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #07080a;
-  --color-surface: #101317;
-  --color-surface-2: #161a20;
-  --color-line: #23272f;
-  --color-line-soft: #1b1f26;
-  --color-fg: #eef1f5;
-  --color-muted: #8d95a1;
-  --color-faint: #616977;
+  /* Warm paper, not white — and never pure black ink. */
+  --color-cream: #fff8ec;
+  --color-paper: #ffffff;
+  --color-ink: #3a2e22;
+  --color-muted: #8b7b66;
+  --color-faint: #b3a28c;
+  --color-line: #efe3ce;
+  --color-line-strong: #e0cfb2;
 
-  --color-mint: #5eead4;
-  --color-mint-deep: #0f766e;
-  --color-lime: #a3e635;
-  --color-amber: #fbbf24;
-  --color-violet: #a78bfa;
-  --color-rose: #fb7185;
+  --color-grass: #2fa36b;
+  --color-grass-ink: #1c7a4d;
+  --color-grass-soft: #ddf3e7;
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --color-coral: #ff7a5c;
+  --color-coral-ink: #d1502f;
+  --color-coral-soft: #ffe8e1;
+
+  --color-butter: #ffc93c;
+  --color-butter-ink: #9a6f00;
+  --color-butter-soft: #fff3d0;
+
+  --color-lilac: #8b7be8;
+  --color-lilac-ink: #5f4ec2;
+  --color-lilac-soft: #eeeaff;
+
+  --color-berry: #e8617d;
+  --color-berry-ink: #bb3a56;
+
+  /* Solid offset shadows — chunky sticker, not blurry glow. */
+  --shadow-sticker: 0 3px 0 0 var(--color-line-strong);
+  --shadow-sticker-lg: 0 5px 0 0 var(--color-line-strong);
+  --shadow-lift: 0 6px 0 0 var(--color-line-strong);
+
+  --radius-blob: 1.5rem;
+
+  --font-sans: var(--font-nunito), ui-rounded, system-ui, sans-serif;
+  --font-display: var(--font-fredoka), var(--font-nunito), sans-serif;
 }
 
 html {
-  color-scheme: dark;
-  background: var(--color-ink);
+  color-scheme: light;
 }
 
 body {
-  background:
-    radial-gradient(60rem 40rem at 12% -10%, rgba(94, 234, 212, 0.07), transparent 60%),
-    radial-gradient(50rem 34rem at 88% 0%, rgba(167, 139, 250, 0.06), transparent 60%),
-    var(--color-ink);
-  color: var(--color-fg);
+  /* Faint dot grid, like squared notebook paper. */
+  background-color: var(--color-cream);
+  background-image: radial-gradient(
+    var(--color-line-strong) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
+  color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background: rgba(94, 234, 212, 0.28);
+  background: var(--color-butter);
+  color: var(--color-ink);
 }
 
-/* --- scrollbar --- */
+h1,
+h2,
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2a2f38 transparent;
+  scrollbar-color: var(--color-line-strong) transparent;
 }
 *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 *::-webkit-scrollbar-thumb {
-  background: #2a2f38;
+  background: var(--color-line-strong);
   border-radius: 99px;
   border: 3px solid transparent;
   background-clip: content-box;
 }
 
-/* --- animations --- */
+/* --- animations: bouncy, not sleek --- */
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -68,16 +96,16 @@ body {
   }
 }
 .animate-rise {
-  animation: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rise 0.4s cubic-bezier(0.34, 1.4, 0.64, 1) both;
 }
 
 @keyframes pop {
   0% {
     opacity: 0;
-    transform: scale(0.9) translateY(6px);
+    transform: scale(0.85);
   }
-  60% {
-    transform: scale(1.02) translateY(0);
+  70% {
+    transform: scale(1.04);
   }
   100% {
     opacity: 1;
@@ -85,43 +113,34 @@ body {
   }
 }
 .animate-pop {
-  animation: pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: pop 0.38s cubic-bezier(0.34, 1.5, 0.64, 1) both;
 }
 
-@keyframes shimmer {
+@keyframes bounce-dot {
+  0%,
+  80%,
   100% {
-    transform: translateX(100%);
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-5px);
   }
 }
-.shimmer {
-  position: relative;
-  overflow: hidden;
-}
-.shimmer::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.05),
-    transparent
-  );
-  animation: shimmer 1.6s infinite;
+.animate-bounce-dot {
+  animation: bounce-dot 1.1s ease-in-out infinite;
 }
 
-@keyframes breathe {
+@keyframes wiggle {
   0%,
   100% {
-    opacity: 0.45;
+    transform: rotate(-2deg);
   }
   50% {
-    opacity: 1;
+    transform: rotate(2deg);
   }
 }
-.animate-breathe {
-  animation: breathe 1.6s ease-in-out infinite;
+.animate-wiggle {
+  animation: wiggle 2.4s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -29,15 +29,15 @@ export default function Page() {
 
   return (
     <main className="min-h-dvh">
-      <nav className="sticky top-0 z-20 border-b border-line/60 bg-ink/80 backdrop-blur-md">
+      <nav className="sticky top-0 z-20 border-b-2 border-line-strong bg-cream/90 backdrop-blur-sm">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between px-4 py-3 sm:px-6">
           <button
             onClick={() => setTopic(null)}
-            className="rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-mint"
+            className="rounded-2xl focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-lilac"
           >
             <Logo small />
           </button>
-          <p className="hidden text-xs text-faint sm:block">
+          <p className="hidden text-sm text-faint sm:block">
             every day, one more sentence than yesterday
           </p>
         </div>
@@ -70,16 +70,14 @@ export default function Page() {
         {badges.map((b) => (
           <div
             key={b.id}
-            className="animate-pop flex items-center gap-3 rounded-2xl border border-amber/30 bg-surface px-5 py-3 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)]"
+            className="animate-pop flex items-center gap-3 rounded-full border-2 border-ink bg-butter px-5 py-3 shadow-sticker-lg"
           >
             <span aria-hidden className="text-2xl">
               {b.emoji}
             </span>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-amber">
-                Unlocked
-              </p>
-              <p className="text-sm font-medium text-fg">{b.label}</p>
+              <p className="text-xs font-bold text-butter-ink">Unlocked!</p>
+              <p className="font-display text-[15px] font-semibold">{b.label}</p>
             </div>
           </div>
         ))}

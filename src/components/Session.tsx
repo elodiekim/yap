@@ -119,13 +119,14 @@ export function Session({ topic, profile, onBadges, onExit }: Props) {
     }
   }, [turns.length]);
 
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pb-32 pt-6 sm:px-6">
-      <div className="mb-6 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Pill tone="mint">{topicLabel(topic)}</Pill>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Pill tone="grass">{topicLabel(topic)}</Pill>
           {turns.length > 0 ? (
-            <Pill tone="muted">
+            <Pill tone="plain">
               {turns.length} {turns.length === 1 ? "answer" : "answers"}
             </Pill>
           ) : null}
@@ -136,7 +137,7 @@ export function Session({ topic, profile, onBadges, onExit }: Props) {
       </div>
 
       {turns.map((turn, i) => (
-        <div key={turn.id} className="mb-10 space-y-4">
+        <div key={turn.id} className="mb-12 space-y-4">
           <AskedQuestion question={turn.question} index={i + 1} />
           <YourAnswer text={turn.answer} words={turn.words} />
           {turn.feedback ? <FeedbackView feedback={turn.feedback} /> : null}
@@ -145,7 +146,7 @@ export function Session({ topic, profile, onBadges, onExit }: Props) {
 
       <div ref={liveRef} className="scroll-mt-6">
         {loadingPrompt ? (
-          <Card className="shimmer p-6">
+          <Card className="p-6">
             <Thinking label="Yap is thinking of a question…" />
           </Card>
         ) : prompt ? (
@@ -169,8 +170,8 @@ export function Session({ topic, profile, onBadges, onExit }: Props) {
       </div>
 
       {error ? (
-        <Card className="mt-4 border-rose/30 bg-rose/[0.06] p-4">
-          <p className="text-sm text-rose">{error}</p>
+        <Card tint="bg-coral-soft" className="mt-4 border-coral/40 p-4">
+          <p className="text-sm font-semibold text-coral-ink">{error}</p>
         </Card>
       ) : null}
     </div>
@@ -187,20 +188,20 @@ function AskedQuestion({
   live?: boolean;
 }) {
   return (
-    <div className="animate-rise flex gap-3">
+    <div className="animate-rise flex items-start gap-3">
       <span
         aria-hidden
-        className={`mt-1 grid size-8 shrink-0 place-items-center rounded-xl text-sm ${
-          live ? "bg-mint/15 ring-1 ring-mint/30" : "bg-white/5"
+        className={`grid size-11 shrink-0 place-items-center rounded-2xl border-2 text-xl ${
+          live
+            ? "border-ink bg-butter shadow-sticker"
+            : "border-line-strong bg-cream"
         }`}
       >
-        💬
+        🐣
       </span>
-      <div>
-        <p className="text-xs font-medium uppercase tracking-[0.14em] text-faint">
-          Question {index}
-        </p>
-        <p className="mt-1.5 text-xl font-medium leading-snug text-fg sm:text-[26px] sm:leading-tight">
+      <div className="pt-0.5">
+        <p className="text-sm font-semibold text-faint">Question {index}</p>
+        <p className="mt-1 font-display text-2xl font-semibold leading-snug sm:text-[28px]">
           {question}
         </p>
       </div>
@@ -211,20 +212,24 @@ function AskedQuestion({
 function HintCard({ hints }: { hints: string[] }) {
   const [open, setOpen] = useState(true);
   return (
-    <Card className="animate-rise border-amber/20 bg-amber/[0.04] p-4">
+    <Card tint="bg-butter-soft" className="border-butter p-4">
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center justify-between gap-2"
       >
-        <SectionLabel color="var(--color-amber)">💡 Need ideas?</SectionLabel>
-        <span className="text-xs text-faint">{open ? "hide" : "show"}</span>
+        <SectionLabel color="bg-butter text-butter-ink">
+          💡 Stuck? Here are some ideas
+        </SectionLabel>
+        <span className="text-sm font-semibold text-butter-ink">
+          {open ? "hide" : "show"}
+        </span>
       </button>
       {open ? (
         <ul className="mt-3 flex flex-wrap gap-2">
           {hints.map((h, i) => (
             <li
               key={i}
-              className="animate-pop rounded-lg border border-amber/20 bg-amber/[0.07] px-3 py-1.5 text-sm text-amber/95"
+              className="animate-pop rounded-full border-2 border-butter bg-paper px-3.5 py-1.5 text-sm font-semibold text-ink"
               style={{ animationDelay: `${i * 45}ms` }}
             >
               {h}
@@ -238,12 +243,12 @@ function HintCard({ hints }: { hints: string[] }) {
 
 function YourAnswer({ text, words }: { text: string; words: number }) {
   return (
-    <Card className="p-5">
+    <Card tint="bg-cream" className="p-5">
       <div className="flex items-center justify-between gap-2">
-        <SectionLabel color="var(--color-muted)">You said</SectionLabel>
-        <span className="text-xs text-faint">{words} words</span>
+        <SectionLabel color="bg-line text-muted">You said</SectionLabel>
+        <span className="text-sm text-faint">{words} words</span>
       </div>
-      <p className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-muted">
+      <p className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-ink/75">
         {text}
       </p>
     </Card>
@@ -266,7 +271,7 @@ function Composer({
   canSubmit: boolean;
 }) {
   return (
-    <Card className="p-4" accent="rgba(94,234,212,0.35)">
+    <Card className="p-4">
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -275,17 +280,17 @@ function Composer({
         }}
         disabled={grading}
         rows={7}
-        placeholder="Write 3–10 sentences. Don't worry about mistakes — just keep going."
-        className="w-full resize-y bg-transparent p-2 text-[17px] leading-[1.8] text-fg outline-none placeholder:text-faint/70 disabled:opacity-50"
+        placeholder="Write 3–10 sentences. Mistakes are totally fine — just keep going!"
+        className="w-full resize-y rounded-2xl bg-cream p-4 text-[17px] leading-[1.8] outline-none placeholder:text-faint focus:ring-3 focus:ring-grass/30 disabled:opacity-60"
       />
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-line-soft pt-3">
-        <p className="text-xs text-faint">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted">
           {words < 8 ? (
-            <>Keep going — {8 - words} more words to go</>
+            <>{8 - words} more words and you&apos;re good to go</>
           ) : (
             <>
               {words} words ·{" "}
-              <kbd className="rounded border border-line px-1 font-mono text-[10px]">
+              <kbd className="rounded-md border-2 border-line-strong bg-cream px-1.5 py-0.5 text-xs font-bold">
                 ⌘↵
               </kbd>{" "}
               to send
@@ -293,10 +298,10 @@ function Composer({
           )}
         </p>
         {grading ? (
-          <Thinking label="Yap is reading your answer…" />
+          <Thinking label="Yap is reading…" />
         ) : (
           <Button onClick={onSubmit} disabled={!canSubmit}>
-            Get feedback →
+            Show me! →
           </Button>
         )}
       </div>

@@ -86,7 +86,8 @@ src/
 - **튜터 성격·피드백 규칙** → `src/lib/prompts.ts`
 - **토픽 추가** → `src/lib/topics.ts`
 - **트로피 조건** → `src/lib/store.ts`의 `newBadges()` + `Dashboard.tsx`의 `BADGE_LABELS`
-- **색상** → `src/app/globals.css`의 `@theme`. 차트 색은 `Dashboard.tsx`의 `MARK` 상수이며 다크 배경(#101317) 기준으로 색각이상·대비 검증을 통과한 값입니다. 바꾸면 재검증하세요.
+- **색상·폰트** → `src/app/globals.css`의 `@theme`. 크림 종이 배경 + 굵은 테두리 + 그림자 없는 입체 오프셋(스티커 느낌)이 톤의 핵심입니다. 폰트는 Fredoka(제목) + Nunito(본문).
+- **차트 색** → `Dashboard.tsx`의 `MARK` 상수. 흰 카드 배경 기준으로 색각이상·대비 검증을 통과한 값이니 바꾸면 재검증하세요.
 
 ## 참고
 

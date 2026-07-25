@@ -18,15 +18,17 @@ export function FeedbackView({ feedback }: { feedback: Feedback }) {
 
 function Praise({ feedback }: { feedback: Feedback }) {
   return (
-    <Card className="animate-rise p-5" accent="rgba(163,230,53,0.5)">
+    <Card tint="bg-grass-soft" className="animate-rise border-grass/40 p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <SectionLabel step={1} color="var(--color-lime)">
-          Nice work
+        <SectionLabel step={1} color="bg-grass text-paper">
+          Nice work!
         </SectionLabel>
-        <Pill tone="violet">{feedback.level}</Pill>
+        <Pill tone="lilac">{feedback.level}</Pill>
       </div>
-      <p className="mt-3 text-[15px] leading-relaxed text-fg/90">{feedback.praise}</p>
-      <p className="mt-2 text-sm text-faint">{feedback.levelNote}</p>
+      <p className="mt-3 text-[15px] leading-relaxed text-ink/85">
+        {feedback.praise}
+      </p>
+      <p className="mt-2 text-sm text-grass-ink">{feedback.levelNote}</p>
     </Card>
   );
 }
@@ -34,10 +36,7 @@ function Praise({ feedback }: { feedback: Feedback }) {
 function Rewrite({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <Card
-      className="animate-rise p-5 [animation-delay:60ms]"
-      accent="rgba(94,234,212,0.6)"
-    >
+    <Card className="animate-rise p-5 [animation-delay:60ms]">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <SectionLabel step={2}>How a native would say it</SectionLabel>
         <button
@@ -46,12 +45,12 @@ function Rewrite({ text }: { text: string }) {
             setCopied(true);
             setTimeout(() => setCopied(false), 1400);
           }}
-          className="text-xs font-medium text-faint transition-colors hover:text-mint"
+          className="text-sm font-semibold text-muted underline decoration-line-strong decoration-2 underline-offset-4 hover:text-grass-ink"
         >
           {copied ? "Copied ✓" : "Copy"}
         </button>
       </div>
-      <blockquote className="mt-3 rounded-xl bg-mint/[0.06] p-4 text-[17px] leading-[1.75] text-fg ring-1 ring-inset ring-mint/20">
+      <blockquote className="mt-3 rounded-2xl border-2 border-grass/35 bg-grass-soft/60 p-4 text-[17px] leading-[1.75]">
         {text}
       </blockquote>
     </Card>
@@ -61,28 +60,25 @@ function Rewrite({ text }: { text: string }) {
 function Mistakes({ feedback }: { feedback: Feedback }) {
   return (
     <Card className="animate-rise p-5 [animation-delay:120ms]">
-      <SectionLabel step={3} color="var(--color-amber)">
-        Worth fixing ({feedback.mistakes.length})
+      <SectionLabel step={3} color="bg-coral text-paper">
+        A few things worth fixing
       </SectionLabel>
       <ul className="mt-4 space-y-3">
         {feedback.mistakes.map((m, i) => (
-          <li
-            key={i}
-            className="rounded-xl border border-line-soft bg-surface-2/60 p-4"
-          >
+          <li key={i} className="rounded-2xl border-2 border-line bg-cream p-4">
             <div className="grid gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-start">
-              <p className="text-sm leading-relaxed text-rose/90 line-through decoration-rose/40">
+              <p className="text-sm leading-relaxed text-berry-ink line-through decoration-berry/50 decoration-2">
                 {m.original}
               </p>
               <span aria-hidden className="hidden text-faint sm:block">
                 →
               </span>
-              <p className="text-sm font-medium leading-relaxed text-mint">
+              <p className="text-sm font-bold leading-relaxed text-grass-ink">
                 {m.better}
               </p>
             </div>
             <p className="mt-3 text-sm leading-relaxed text-muted">{m.reason}</p>
-            <p className="mt-2 border-l-2 border-line pl-3 text-sm italic leading-relaxed text-faint">
+            <p className="mt-2 rounded-xl bg-paper px-3 py-2 text-sm italic leading-relaxed text-muted">
               {m.example}
             </p>
           </li>
@@ -95,18 +91,22 @@ function Mistakes({ feedback }: { feedback: Feedback }) {
 function Expressions({ feedback }: { feedback: Feedback }) {
   return (
     <Card className="animate-rise p-5 [animation-delay:180ms]">
-      <SectionLabel step={4} color="var(--color-violet)">
-        Steal these expressions
+      <SectionLabel step={4} color="bg-lilac text-paper">
+        Steal these three
       </SectionLabel>
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         {feedback.expressions.map((e, i) => (
           <div
             key={i}
-            className="rounded-xl border border-violet/20 bg-violet/[0.06] p-4"
+            className="rounded-2xl border-2 border-lilac/35 bg-lilac-soft p-4"
           >
-            <p className="font-mono text-sm font-semibold text-violet">{e.phrase}</p>
-            <p className="mt-2 text-sm leading-relaxed text-muted">{e.meaning}</p>
-            <p className="mt-2 text-sm italic leading-relaxed text-faint">
+            <p className="font-display text-[15px] font-bold text-lilac-ink">
+              {e.phrase}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-ink/75">
+              {e.meaning}
+            </p>
+            <p className="mt-2 text-sm italic leading-relaxed text-muted">
               {e.example}
             </p>
           </div>
@@ -133,28 +133,30 @@ function Shadowing({ lines }: { lines: string[] }) {
 
   return (
     <Card className="animate-rise p-5 [animation-delay:240ms]">
-      <SectionLabel step={5}>Say these out loud</SectionLabel>
+      <SectionLabel step={5} color="bg-butter text-butter-ink">
+        Say these out loud
+      </SectionLabel>
       <ul className="mt-4 space-y-2">
         {lines.map((line, i) => (
           <li key={i}>
             <button
               onClick={() => speak(line, i)}
-              className="group flex w-full items-start gap-3 rounded-xl border border-line-soft bg-surface-2/60 p-4 text-left transition-colors hover:border-mint/30 hover:bg-mint/[0.04]"
+              className="group flex w-full items-center gap-3 rounded-2xl border-2 border-line bg-cream p-4 text-left transition-all duration-150 hover:-translate-y-0.5 hover:border-grass hover:shadow-sticker active:translate-y-0 active:shadow-none"
             >
               <span
                 aria-hidden
-                className={`mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-mint/12 text-mint transition-transform group-hover:scale-110 ${
-                  speaking === i ? "animate-breathe" : ""
+                className={`grid size-9 shrink-0 place-items-center rounded-full border-2 border-ink bg-grass text-sm text-paper transition-transform group-hover:scale-110 ${
+                  speaking === i ? "animate-wiggle" : ""
                 }`}
               >
                 ▶
               </span>
-              <span className="text-[15px] leading-relaxed text-fg/90">{line}</span>
+              <span className="text-[15px] leading-relaxed">{line}</span>
             </button>
           </li>
         ))}
       </ul>
-      <p className="mt-3 text-xs text-faint">
+      <p className="mt-3 text-sm text-faint">
         Tap a line to hear it, then repeat it until it feels like yours.
       </p>
     </Card>
