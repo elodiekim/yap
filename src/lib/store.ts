@@ -133,34 +133,34 @@ export function newBadges(
 
   const s = streak(after.days);
   for (const milestone of [3, 7, 14, 30, 100]) {
-    if (s >= milestone) push(`streak-${milestone}`, "🔥", `${milestone}-day streak`);
+    if (s >= milestone) push(`streak-${milestone}`, "🔥", `${milestone}일 연속`);
   }
 
-  if (after.totalConversations >= 1) push("first-yap", "🌱", "First yap");
+  if (after.totalConversations >= 1) push("first-yap", "🌱", "첫 대화");
   for (const milestone of [10, 25, 50, 100]) {
     if (after.totalConversations >= milestone)
-      push(`talks-${milestone}`, "💬", `${milestone} conversations`);
+      push(`talks-${milestone}`, "💬", `대화 ${milestone}회`);
   }
 
   const w = wordsToday(after);
-  if (w >= 100) push("words-100", "✍️", "Wrote 100 words today");
-  if (w >= 200) push("words-200", "🏆", "Wrote 200 words today");
+  if (w >= 100) push("words-100", "✍️", "하루 100단어");
+  if (w >= 200) push("words-200", "🏆", "하루 200단어");
 
-  if (after.vocab.length >= 10) push("vocab-10", "⭐", "10 expressions mastered");
-  if (after.vocab.length >= 30) push("vocab-30", "🌟", "30 expressions mastered");
-  if (after.vocab.length >= 75) push("vocab-75", "💎", "75 expressions mastered");
+  if (after.vocab.length >= 10) push("vocab-10", "⭐", "표현 10개");
+  if (after.vocab.length >= 30) push("vocab-30", "🌟", "표현 30개");
+  if (after.vocab.length >= 75) push("vocab-75", "💎", "표현 75개");
 
   if (feedback.mistakes.length === 0)
-    push("flawless", "🎯", "A whole answer with nothing to fix");
+    push("flawless", "🎯", "고칠 것 없는 답변");
 
   if (after.topicsPracticed.length >= 5)
-    push("topics-5", "🗺️", "5 topics explored");
+    push("topics-5", "🗺️", "주제 5개");
   if (after.topicsPracticed.length >= 9)
-    push("topics-all", "🧭", "Every topic tried");
+    push("topics-all", "🧭", "모든 주제");
 
   const order: Level[] = ["A2", "B1", "B2", "C1"];
   if (order.indexOf(after.level) > order.indexOf(before.level))
-    push(`level-${after.level}`, "🚀", `Reached ${after.level}`);
+    push(`level-${after.level}`, "🚀", `${after.level} 도달`);
 
   return earned;
 }

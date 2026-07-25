@@ -29,16 +29,16 @@ export default function Page() {
 
   return (
     <main className="min-h-dvh">
-      <nav className="sticky top-0 z-20 border-b-2 border-line-strong bg-cream/90 backdrop-blur-sm">
-        <div className="mx-auto flex w-full max-w-4xl items-center justify-between px-4 py-3 sm:px-6">
+      <nav className="sticky top-0 z-20 border-b border-hair bg-cloud/85 backdrop-blur-sm">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-5 py-3.5 sm:px-6">
           <button
             onClick={() => setTopic(null)}
-            className="rounded-2xl focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-lilac"
+            className="rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
           >
             <Logo small />
           </button>
-          <p className="hidden text-sm text-faint sm:block">
-            every day, one more sentence than yesterday
+          <p className="ko hidden text-[13px] text-faint sm:block">
+            어제보다 한 문장 더
           </p>
         </div>
       </nav>
@@ -56,7 +56,7 @@ export default function Page() {
           profile={profile}
           onStart={setTopic}
           onReset={() => {
-            if (confirm("Delete your streak, vocabulary and history?")) {
+            if (confirm("연속 학습일, 배운 표현, 기록을 모두 지울까요?")) {
               resetProfile();
             }
           }}
@@ -70,15 +70,15 @@ export default function Page() {
         {badges.map((b) => (
           <div
             key={b.id}
-            className="animate-pop flex items-center gap-3 rounded-full border-2 border-ink bg-butter px-5 py-3 shadow-sticker-lg"
+            className="animate-rise flex items-center gap-2.5 rounded-lg border border-hair bg-card px-4 py-2.5 shadow-raised"
           >
-            <span aria-hidden className="text-2xl">
+            <span aria-hidden className="text-[15px]">
               {b.emoji}
             </span>
-            <div>
-              <p className="text-xs font-bold text-butter-ink">Unlocked!</p>
-              <p className="font-display text-[15px] font-semibold">{b.label}</p>
-            </div>
+            <p className="ko text-[14px] text-ink">
+              <span className="text-muted">달성 · </span>
+              {b.label}
+            </p>
           </div>
         ))}
       </div>

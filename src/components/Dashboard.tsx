@@ -3,37 +3,36 @@
 import { useMemo, useState } from "react";
 import { LEVELS, type Profile } from "@/lib/types";
 import { mistakeTrend, streak, wordsToday } from "@/lib/store";
-import { Card, Pill, SectionLabel } from "./ui";
+import { Card, SectionLabel } from "./ui";
 
 /**
- * Data-mark colors, validated with scripts/validate_palette.js against the
- * white card surface (#FFFFFF) in light mode — all six checks pass. The softer
- * UI tokens (grass, lilac, coral) are for chrome and text, never for marks.
+ * Only two encodings carry data here, so there is no categorical palette:
+ *  - LINE  — one series, one colour. 5.4:1 on the white card (WCAG AA).
+ *  - RAMP  — the CEFR meter is ordinal magnitude, so it uses one hue with
+ *            strictly decreasing lightness (0.75 → 0.55 → 0.32 → 0.13).
+ * Keep both properties if you change these values.
  */
-const MARK = {
-  teal: "#0d9488",
-  violet: "#8b5cf6",
-  amber: "#d97706",
-};
+const LINE = "#14776a";
+const RAMP = ["#cfe6e0", "#9bcdc2", "#5fa697", "#1f6f60"];
 
 export function Dashboard({ profile }: { profile: Profile }) {
   const days = streak(profile.days);
   const trend = useMemo(() => mistakeTrend(profile), [profile]);
 
   return (
-    <div className="space-y-4">
-      <StreakHero days={days} wordsToday={wordsToday(profile)} />
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat emoji="📅" label="Days practised" value={profile.days.length} />
-        <Stat emoji="💬" label="Chats" value={profile.totalConversations} />
-        <Stat
-          emoji="✍️"
-          label="Words written"
-          value={profile.totalWords.toLocaleString()}
-        />
-        <Stat emoji="⭐" label="Expressions" value={profile.vocab.length} />
-      </div>
+    <div className="space-y-3">
+      <Card className="p-5">
+        <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4">
+          <Stat value={days} unit="일" label="연속 학습" accent={days > 0} />
+          <Stat value={profile.days.length} unit="일" label="총 학습일" />
+          <Stat value={profile.totalConversations} unit="회" label="대화" />
+          <Stat value={profile.vocab.length} unit="개" label="배운 표현" />
+        </div>
+        <p className="ko mt-5 border-t border-hair pt-4 text-[13px] text-muted">
+          누적 {profile.totalWords.toLocaleString()}단어 · 오늘{" "}
+          {wordsToday(profile)}단어
+        </p>
+      </Card>
 
       <LevelMeter profile={profile} />
       <MistakeTrend trend={trend} />
@@ -42,53 +41,31 @@ export function Dashboard({ profile }: { profile: Profile }) {
   );
 }
 
-function StreakHero({ days, wordsToday }: { days: number; wordsToday: number }) {
-  return (
-    <Card tint="bg-coral-soft" className="border-coral/40 p-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <span aria-hidden className="animate-wiggle text-5xl">
-            {days > 0 ? "🔥" : "🌱"}
-          </span>
-          <div>
-            <p className="text-sm font-bold text-coral-ink">Current streak</p>
-            <p className="flex items-baseline gap-2">
-              <span className="font-display text-5xl font-bold tabular-nums text-coral-ink">
-                {days}
-              </span>
-              <span className="font-display text-lg font-semibold text-coral-ink/70">
-                {days === 1 ? "day" : "days"}
-              </span>
-            </p>
-          </div>
-        </div>
-        <p className="max-w-[20rem] text-sm leading-relaxed text-ink/70">
-          {days === 0
-            ? "Nothing yet today. One answer starts a streak."
-            : `${wordsToday} words today. One more sentence than yesterday!`}
-        </p>
-      </div>
-    </Card>
-  );
-}
-
 function Stat({
-  emoji,
-  label,
   value,
+  unit,
+  label,
+  accent = false,
 }: {
-  emoji: string;
-  label: string;
   value: number | string;
+  unit: string;
+  label: string;
+  accent?: boolean;
 }) {
   return (
-    <Card className="p-4 text-center">
-      <span aria-hidden className="text-xl">
-        {emoji}
-      </span>
-      <p className="font-display text-3xl font-bold tabular-nums">{value}</p>
-      <p className="mt-0.5 text-xs leading-snug text-muted">{label}</p>
-    </Card>
+    <div>
+      <p
+        className={`text-[26px] font-semibold tabular-nums leading-none ${
+          accent ? "text-accent" : "text-ink"
+        }`}
+      >
+        {value}
+        <span className="ml-0.5 text-[13px] font-normal text-muted">
+          {unit}
+        </span>
+      </p>
+      <p className="ko mt-1.5 text-[13px] text-muted">{label}</p>
+    </div>
   );
 }
 
@@ -96,25 +73,26 @@ function LevelMeter({ profile }: { profile: Profile }) {
   const idx = LEVELS.indexOf(profile.level);
   return (
     <Card className="p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <SectionLabel color="bg-lilac text-paper">Your level</SectionLabel>
-        <Pill tone="lilac">Now: {profile.level}</Pill>
+      <div className="flex items-baseline justify-between gap-2">
+        <SectionLabel en="Level" ko="지금 레벨" />
+        <span className="text-[15px] font-semibold text-ink">
+          {profile.level}
+        </span>
       </div>
-      <ol className="mt-4 grid grid-cols-4 gap-2">
+      <ol className="mt-4 grid grid-cols-4 gap-1.5">
         {LEVELS.map((lv, i) => {
           const reached = i <= idx;
           return (
             <li key={lv}>
               <div
-                className="h-3 rounded-full border-2 border-line-strong transition-colors duration-500"
+                className="h-1.5 rounded-full transition-colors duration-500"
                 style={{
-                  background: reached ? MARK.violet : "var(--color-cream)",
-                  opacity: reached ? 0.45 + (i / 3) * 0.55 : 1,
+                  background: reached ? RAMP[i] : "var(--color-hair)",
                 }}
               />
               <p
-                className={`mt-2 font-display text-sm ${
-                  i === idx ? "font-bold text-ink" : "text-faint"
+                className={`mt-2 text-[13px] tabular-nums ${
+                  i === idx ? "font-semibold text-ink" : "text-faint"
                 }`}
               >
                 {lv}
@@ -124,9 +102,9 @@ function LevelMeter({ profile }: { profile: Profile }) {
         })}
       </ol>
       {profile.levelHistory.length > 1 ? (
-        <p className="mt-3 text-sm text-faint">
-          You started at {profile.levelHistory[0].level} on{" "}
-          {profile.levelHistory[0].date}.
+        <p className="ko mt-3 text-[13px] text-muted">
+          {profile.levelHistory[0].date}에 {profile.levelHistory[0].level}로
+          시작했어요.
         </p>
       ) : null}
     </Card>
@@ -140,27 +118,26 @@ function MistakeTrend({ trend }: { trend: { date: string; avg: number }[] }) {
   if (trend.length < 3) {
     return (
       <Card className="p-5">
-        <SectionLabel color="bg-line text-muted">
-          Mistakes per answer
-        </SectionLabel>
-        <p className="mt-3 text-sm leading-relaxed text-muted">
-          {3 - trend.length} more{" "}
-          {3 - trend.length === 1 ? "answer" : "answers"} and Yap will start
-          charting whether your mistakes are going down. 📉
+        <SectionLabel en="Mistakes per answer" ko="답변당 실수" />
+        <p className="ko mt-2.5 text-[13px] leading-relaxed text-muted">
+          답변 {3 - trend.length}개를 더 쓰면 실수가 줄고 있는지 그래프로
+          보여줍니다.
         </p>
       </Card>
     );
   }
 
   const W = 640;
-  const H = 120;
-  const PAD = { t: 14, r: 14, b: 14, l: 14 };
+  const H = 110;
+  const PAD = { t: 12, r: 12, b: 12, l: 12 };
   const max = Math.max(2, ...trend.map((t) => t.avg));
   const x = (i: number) =>
     PAD.l + (i / (trend.length - 1)) * (W - PAD.l - PAD.r);
   const y = (v: number) => PAD.t + (1 - v / max) * (H - PAD.t - PAD.b);
 
-  const path = trend.map((t, i) => `${i ? "L" : "M"}${x(i)},${y(t.avg)}`).join(" ");
+  const path = trend
+    .map((t, i) => `${i ? "L" : "M"}${x(i)},${y(t.avg)}`)
+    .join(" ");
   const last = trend[trend.length - 1];
   const first = trend[0];
   const delta = last.avg - first.avg;
@@ -168,55 +145,56 @@ function MistakeTrend({ trend }: { trend: { date: string; avg: number }[] }) {
 
   return (
     <Card className="p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <SectionLabel color="bg-line text-muted">
-          Mistakes per answer
-        </SectionLabel>
+      <div className="flex items-baseline justify-between gap-2">
+        <SectionLabel en="Mistakes per answer" ko="답변당 실수" />
         <button
           onClick={() => setShowTable((s) => !s)}
-          className="text-sm font-semibold text-muted underline decoration-line-strong decoration-2 underline-offset-4 hover:text-ink"
+          className="shrink-0 text-[13px] text-muted hover:text-ink"
         >
-          {showTable ? "Show chart" : "Show table"}
+          {showTable ? "그래프로" : "표로"}
         </button>
       </div>
 
-      <p className="mt-2 text-sm leading-relaxed text-muted">
+      <p className="ko mt-2 text-[13px] leading-relaxed text-body">
         {delta < -0.3 ? (
           <>
-            Down from {first.avg.toFixed(1)} to{" "}
-            <span className="font-bold text-ink">{last.avg.toFixed(1)}</span> —
-            fewer mistakes than when you started. 🎉
+            {first.avg.toFixed(1)}개에서{" "}
+            <span className="font-semibold text-ink">
+              {last.avg.toFixed(1)}개
+            </span>
+            로 줄었어요. 처음보다 실수가 적어지고 있습니다.
           </>
         ) : delta > 0.3 ? (
           <>
-            Up to <span className="font-bold text-ink">{last.avg.toFixed(1)}</span>{" "}
-            — usually a sign you&apos;re trying harder sentences. That&apos;s a
-            good thing!
+            <span className="font-semibold text-ink">
+              {last.avg.toFixed(1)}개
+            </span>
+            로 늘었지만, 보통은 더 어려운 문장에 도전하고 있다는 뜻이에요.
           </>
         ) : (
           <>
-            Steady around{" "}
-            <span className="font-bold text-ink">{last.avg.toFixed(1)}</span> per
-            answer.
+            답변당{" "}
+            <span className="font-semibold text-ink">
+              {last.avg.toFixed(1)}개
+            </span>{" "}
+            정도로 유지되고 있어요.
           </>
         )}
       </p>
 
       {showTable ? (
-        <table className="mt-4 w-full text-sm">
-          <caption className="sr-only">
-            Rolling average of major mistakes per answer, by date
-          </caption>
+        <table className="mt-4 w-full text-[13px]">
+          <caption className="sr-only">날짜별 답변당 평균 실수 개수</caption>
           <thead>
-            <tr className="text-left text-xs text-faint">
-              <th className="pb-2 font-semibold">Date</th>
-              <th className="pb-2 text-right font-semibold">Avg mistakes</th>
+            <tr className="text-left text-faint">
+              <th className="pb-2 font-normal">날짜</th>
+              <th className="pb-2 text-right font-normal">평균 실수</th>
             </tr>
           </thead>
           <tbody className="text-muted">
             {trend.map((t, i) => (
-              <tr key={i} className="border-t-2 border-line">
-                <td className="py-1.5">{t.date}</td>
+              <tr key={i} className="border-t border-hair">
+                <td className="py-1.5 tabular-nums">{t.date}</td>
                 <td className="py-1.5 text-right tabular-nums">
                   {t.avg.toFixed(1)}
                 </td>
@@ -230,7 +208,7 @@ function MistakeTrend({ trend }: { trend: { date: string; avg: number }[] }) {
             viewBox={`0 0 ${W} ${H}`}
             className="w-full"
             role="img"
-            aria-label={`Rolling average of major mistakes per answer over the last ${trend.length} sessions, from ${first.avg.toFixed(1)} to ${last.avg.toFixed(1)}.`}
+            aria-label={`최근 ${trend.length}회 답변당 평균 실수 추이. ${first.avg.toFixed(1)}개에서 ${last.avg.toFixed(1)}개.`}
             onMouseLeave={() => setHover(null)}
           >
             <line
@@ -238,13 +216,13 @@ function MistakeTrend({ trend }: { trend: { date: string; avg: number }[] }) {
               x2={W - PAD.r}
               y1={H - PAD.b}
               y2={H - PAD.b}
-              stroke="var(--color-line)"
-              strokeWidth={2}
+              stroke="var(--color-hair)"
+              strokeWidth={1}
             />
             <path
               d={path}
               fill="none"
-              stroke={MARK.teal}
+              stroke={LINE}
               strokeWidth={2}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -252,9 +230,9 @@ function MistakeTrend({ trend }: { trend: { date: string; avg: number }[] }) {
             <circle
               cx={x(active)}
               cy={y(trend[active].avg)}
-              r={5}
-              fill={MARK.teal}
-              stroke="var(--color-paper)"
+              r={4}
+              fill={LINE}
+              stroke="var(--color-card)"
               strokeWidth={2}
             />
             {trend.map((t, i) => (
@@ -269,10 +247,10 @@ function MistakeTrend({ trend }: { trend: { date: string; avg: number }[] }) {
               />
             ))}
           </svg>
-          <figcaption className="mt-2 flex items-center justify-between text-xs text-faint">
+          <figcaption className="mt-2 flex items-baseline justify-between text-[12px] tabular-nums text-faint">
             <span>{first.date}</span>
-            <span className="font-semibold text-muted">
-              {trend[active].date}: {trend[active].avg.toFixed(1)} mistakes
+            <span className="text-muted">
+              {trend[active].date} · {trend[active].avg.toFixed(1)}개
             </span>
             <span>{last.date}</span>
           </figcaption>
@@ -282,52 +260,49 @@ function MistakeTrend({ trend }: { trend: { date: string; avg: number }[] }) {
   );
 }
 
-const BADGE_LABELS: Record<string, { emoji: string; label: string }> = {
-  "first-yap": { emoji: "🌱", label: "First yap" },
-  "streak-3": { emoji: "🔥", label: "3-day streak" },
-  "streak-7": { emoji: "🔥", label: "7-day streak" },
-  "streak-14": { emoji: "🔥", label: "14-day streak" },
-  "streak-30": { emoji: "🔥", label: "30-day streak" },
-  "streak-100": { emoji: "🔥", label: "100-day streak" },
-  "talks-10": { emoji: "💬", label: "10 chats" },
-  "talks-25": { emoji: "💬", label: "25 chats" },
-  "talks-50": { emoji: "💬", label: "50 chats" },
-  "talks-100": { emoji: "💬", label: "100 chats" },
-  "words-100": { emoji: "✍️", label: "100 words in a day" },
-  "words-200": { emoji: "🏆", label: "200 words in a day" },
-  "vocab-10": { emoji: "⭐", label: "10 expressions" },
-  "vocab-30": { emoji: "🌟", label: "30 expressions" },
-  "vocab-75": { emoji: "💎", label: "75 expressions" },
-  flawless: { emoji: "🎯", label: "Nothing to fix" },
-  "topics-5": { emoji: "🗺️", label: "5 topics" },
-  "topics-all": { emoji: "🧭", label: "Every topic" },
-  "level-B1": { emoji: "🚀", label: "Reached B1" },
-  "level-B2": { emoji: "🚀", label: "Reached B2" },
-  "level-C1": { emoji: "🚀", label: "Reached C1" },
+const BADGE_LABELS: Record<string, string> = {
+  "first-yap": "첫 대화",
+  "streak-3": "3일 연속",
+  "streak-7": "7일 연속",
+  "streak-14": "14일 연속",
+  "streak-30": "30일 연속",
+  "streak-100": "100일 연속",
+  "talks-10": "대화 10회",
+  "talks-25": "대화 25회",
+  "talks-50": "대화 50회",
+  "talks-100": "대화 100회",
+  "words-100": "하루 100단어",
+  "words-200": "하루 200단어",
+  "vocab-10": "표현 10개",
+  "vocab-30": "표현 30개",
+  "vocab-75": "표현 75개",
+  flawless: "고칠 것 없는 답변",
+  "topics-5": "주제 5개",
+  "topics-all": "모든 주제",
+  "level-B1": "B1 도달",
+  "level-B2": "B2 도달",
+  "level-C1": "C1 도달",
 };
 
 function Badges({ profile }: { profile: Profile }) {
   return (
     <Card className="p-5">
-      <SectionLabel color="bg-butter text-butter-ink">
-        Trophies ({profile.badges.length})
-      </SectionLabel>
+      <SectionLabel en="Milestones" ko={`달성 ${profile.badges.length}개`} />
       {profile.badges.length === 0 ? (
-        <p className="mt-3 text-sm text-muted">
-          None yet — your first one is one answer away!
+        <p className="ko mt-2.5 text-[13px] text-muted">
+          아직 없어요. 답변 하나면 첫 기록이 생깁니다.
         </p>
       ) : (
-        <ul className="mt-4 flex flex-wrap gap-2">
+        <ul className="mt-3 flex flex-wrap gap-1.5">
           {profile.badges.map((id) => {
-            const b = BADGE_LABELS[id];
-            if (!b) return null;
+            const label = BADGE_LABELS[id];
+            if (!label) return null;
             return (
               <li
                 key={id}
-                className="flex items-center gap-2 rounded-full border-2 border-line-strong bg-cream px-3.5 py-1.5 text-sm font-semibold"
+                className="ko rounded-md border border-hair bg-sunk px-2.5 py-1 text-[13px] text-body"
               >
-                <span aria-hidden>{b.emoji}</span>
-                {b.label}
+                {label}
               </li>
             );
           })}

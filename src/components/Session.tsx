@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Feedback, Profile, Prompt, Turn } from "@/lib/types";
-import { topicLabel } from "@/lib/topics";
+import { topicKo, topicLabel } from "@/lib/topics";
 import {
   applySession,
   countWords,
@@ -11,7 +11,7 @@ import {
   type Badge,
 } from "@/lib/store";
 import { FeedbackView } from "./FeedbackView";
-import { Button, Card, Pill, SectionLabel, Thinking } from "./ui";
+import { Button, Card, Meta, SectionLabel, Thinking } from "./ui";
 
 interface Props {
   topic: string;
@@ -120,24 +120,24 @@ export function Session({ topic, profile, onBadges, onExit }: Props) {
   }, [turns.length]);
 
 
+
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pb-32 pt-6 sm:px-6">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Pill tone="grass">{topicLabel(topic)}</Pill>
-          {turns.length > 0 ? (
-            <Pill tone="plain">
-              {turns.length} {turns.length === 1 ? "answer" : "answers"}
-            </Pill>
-          ) : null}
+    <div className="mx-auto w-full max-w-3xl px-5 pb-32 pt-8 sm:px-6">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-3 border-b border-hair pb-4">
+        <div className="flex flex-wrap items-center gap-x-3">
+          <span className="text-[15px] font-semibold text-ink">
+            {topicLabel(topic)}
+          </span>
+          <span className="ko text-[13px] text-muted">{topicKo(topic)}</span>
+          {turns.length > 0 ? <Meta>답변 {turns.length}개</Meta> : null}
         </div>
         <Button variant="quiet" onClick={onExit}>
-          ← Done for now
+          ← 오늘은 여기까지
         </Button>
       </div>
 
       {turns.map((turn, i) => (
-        <div key={turn.id} className="mb-12 space-y-4">
+        <div key={turn.id} className="mb-14 space-y-3">
           <AskedQuestion question={turn.question} index={i + 1} />
           <YourAnswer text={turn.answer} words={turn.words} />
           {turn.feedback ? <FeedbackView feedback={turn.feedback} /> : null}
@@ -146,11 +146,11 @@ export function Session({ topic, profile, onBadges, onExit }: Props) {
 
       <div ref={liveRef} className="scroll-mt-6">
         {loadingPrompt ? (
-          <Card className="p-6">
-            <Thinking label="Yap is thinking of a question…" />
+          <Card className="p-5">
+            <Thinking label="질문을 만들고 있어요…" />
           </Card>
         ) : prompt ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <AskedQuestion
               question={prompt.question}
               index={turns.length + 1}
@@ -170,8 +170,8 @@ export function Session({ topic, profile, onBadges, onExit }: Props) {
       </div>
 
       {error ? (
-        <Card tint="bg-coral-soft" className="mt-4 border-coral/40 p-4">
-          <p className="text-sm font-semibold text-coral-ink">{error}</p>
+        <Card tone="bg-flag-soft" className="mt-4 border-flag/25 p-4">
+          <p className="ko text-[14px] text-flag">{error}</p>
         </Card>
       ) : null}
     </div>
@@ -188,23 +188,14 @@ function AskedQuestion({
   live?: boolean;
 }) {
   return (
-    <div className="animate-rise flex items-start gap-3">
-      <span
-        aria-hidden
-        className={`grid size-11 shrink-0 place-items-center rounded-2xl border-2 text-xl ${
-          live
-            ? "border-ink bg-butter shadow-sticker"
-            : "border-line-strong bg-cream"
-        }`}
-      >
-        🐣
-      </span>
-      <div className="pt-0.5">
-        <p className="text-sm font-semibold text-faint">Question {index}</p>
-        <p className="mt-1 font-display text-2xl font-semibold leading-snug sm:text-[28px]">
-          {question}
-        </p>
-      </div>
+    <div className="animate-rise">
+      <p className="text-[13px] tabular-nums text-faint">
+        Question {index}
+        {live ? <span className="ml-2 text-accent">지금 차례</span> : null}
+      </p>
+      <p className="mt-1.5 text-[22px] font-semibold leading-snug text-ink sm:text-[26px]">
+        {question}
+      </p>
     </div>
   );
 }
@@ -212,30 +203,33 @@ function AskedQuestion({
 function HintCard({ hints }: { hints: string[] }) {
   const [open, setOpen] = useState(true);
   return (
-    <Card tint="bg-butter-soft" className="border-butter p-4">
+    <Card tone="bg-accent-soft" className="border-accent-line p-4">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-2"
+        className="flex w-full items-baseline justify-between gap-2 text-left"
       >
-        <SectionLabel color="bg-butter text-butter-ink">
-          💡 Stuck? Here are some ideas
-        </SectionLabel>
-        <span className="text-sm font-semibold text-butter-ink">
-          {open ? "hide" : "show"}
+        <SectionLabel en="Need ideas?" ko="할 말이 안 떠오르면" />
+        <span className="shrink-0 text-[13px] text-muted">
+          {open ? "접기" : "펼치기"}
         </span>
       </button>
       {open ? (
-        <ul className="mt-3 flex flex-wrap gap-2">
-          {hints.map((h, i) => (
-            <li
-              key={i}
-              className="animate-pop rounded-full border-2 border-butter bg-paper px-3.5 py-1.5 text-sm font-semibold text-ink"
-              style={{ animationDelay: `${i * 45}ms` }}
-            >
-              {h}
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="mt-3 flex flex-wrap gap-1.5">
+            {hints.map((h, i) => (
+              <li
+                key={i}
+                className="animate-fade rounded-md border border-accent-line bg-card px-2.5 py-1 text-[13px] text-ink"
+                style={{ animationDelay: `${i * 35}ms` }}
+              >
+                {h}
+              </li>
+            ))}
+          </ul>
+          <p className="ko mt-3 text-[13px] text-muted">
+            이 중 하나만 골라서 이야기를 시작해도 충분해요.
+          </p>
+        </>
       ) : null}
     </Card>
   );
@@ -243,12 +237,14 @@ function HintCard({ hints }: { hints: string[] }) {
 
 function YourAnswer({ text, words }: { text: string; words: number }) {
   return (
-    <Card tint="bg-cream" className="p-5">
-      <div className="flex items-center justify-between gap-2">
-        <SectionLabel color="bg-line text-muted">You said</SectionLabel>
-        <span className="text-sm text-faint">{words} words</span>
+    <Card tone="bg-sunk" className="p-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <SectionLabel en="Your answer" ko="내가 쓴 답" />
+        <span className="text-[13px] tabular-nums text-faint">
+          {words} words
+        </span>
       </div>
-      <p className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-ink/75">
+      <p className="mt-2.5 whitespace-pre-wrap text-[15px] leading-relaxed text-body">
         {text}
       </p>
     </Card>
@@ -279,29 +275,29 @@ function Composer({
           if ((e.metaKey || e.ctrlKey) && e.key === "Enter") onSubmit();
         }}
         disabled={grading}
-        rows={7}
-        placeholder="Write 3–10 sentences. Mistakes are totally fine — just keep going!"
-        className="w-full resize-y rounded-2xl bg-cream p-4 text-[17px] leading-[1.8] outline-none placeholder:text-faint focus:ring-3 focus:ring-grass/30 disabled:opacity-60"
+        rows={8}
+        placeholder="영어로 3~10문장 정도 써보세요. 틀려도 괜찮으니 일단 끝까지 써보는 게 중요해요."
+        className="w-full resize-y rounded-lg bg-transparent text-[16px] leading-[1.85] text-ink outline-none placeholder:text-faint disabled:opacity-60"
       />
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-hair pt-3">
+        <p className="ko text-[13px] text-muted">
           {words < 8 ? (
-            <>{8 - words} more words and you&apos;re good to go</>
+            <>{8 - words}단어만 더 쓰면 제출할 수 있어요</>
           ) : (
             <>
               {words} words ·{" "}
-              <kbd className="rounded-md border-2 border-line-strong bg-cream px-1.5 py-0.5 text-xs font-bold">
+              <kbd className="rounded border border-hair-strong bg-sunk px-1 py-0.5 text-[11px]">
                 ⌘↵
               </kbd>{" "}
-              to send
+              로 제출
             </>
           )}
         </p>
         {grading ? (
-          <Thinking label="Yap is reading…" />
+          <Thinking label="답변을 읽고 있어요…" />
         ) : (
           <Button onClick={onSubmit} disabled={!canSubmit}>
-            Show me! →
+            피드백 받기
           </Button>
         )}
       </div>

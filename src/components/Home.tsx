@@ -4,7 +4,7 @@ import { TOPICS } from "@/lib/topics";
 import type { Profile } from "@/lib/types";
 import { streak } from "@/lib/store";
 import { Dashboard } from "./Dashboard";
-import { Button, Card, Pill } from "./ui";
+import { Button, Card, Meta } from "./ui";
 
 export function Home({
   profile,
@@ -19,68 +19,69 @@ export function Home({
   const fresh = profile.totalConversations === 0;
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 pb-24 pt-10 sm:px-6">
-      <header className="animate-rise text-center sm:text-left">
-        <span
-          aria-hidden
-          className="inline-block animate-wiggle text-6xl sm:text-7xl"
-        >
-          🐣
-        </span>
-        <h1 className="mt-4 font-display text-4xl font-semibold leading-[1.15] sm:text-5xl">
-          Every day, <span className="text-grass-ink">one more sentence</span>{" "}
-          than yesterday.
+    <div className="mx-auto w-full max-w-3xl px-5 pb-24 pt-14 sm:px-6">
+      <header className="animate-rise">
+        <h1 className="text-[32px] font-semibold leading-[1.25] sm:text-[40px]">
+          Every day, one more sentence than yesterday.
         </h1>
-        <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted sm:mx-0 sm:text-lg">
-          Yap is a friendly tutor who just wants you to keep talking. It hands
-          you ideas when your mind goes blank, and shows you how a native would
-          have said it.
+        <p className="ko mt-3 text-[17px] leading-relaxed text-body">
+          어제보다 한 문장 더. 문법을 지적당하는 대신, 계속 말하게 만드는 영어
+          연습.
         </p>
-        <div className="mt-5 flex min-h-[34px] flex-wrap justify-center gap-2 sm:justify-start">
-          <Pill tone="lilac">Level {profile.level}</Pill>
-          {s > 0 ? <Pill tone="coral">🔥 {s}-day streak</Pill> : null}
+        <p className="ko mt-4 max-w-xl text-[15px] leading-relaxed text-muted">
+          질문 하나를 받고 영어로 답하면, 원어민이라면 어떻게 말했을지 다시
+          써줍니다. 할 말이 떠오르지 않을 땐 힌트를 같이 줍니다.
+        </p>
+        <div className="mt-6 flex min-h-[20px] flex-wrap items-center gap-x-4 gap-y-1">
+          <Meta>레벨 {profile.level}</Meta>
+          {s > 0 ? <Meta accent>{s}일 연속</Meta> : null}
           {profile.totalConversations > 0 ? (
-            <Pill tone="plain">{profile.totalConversations} chats</Pill>
+            <Meta>대화 {profile.totalConversations}회</Meta>
           ) : null}
         </div>
       </header>
 
-      <section className="mt-12 animate-rise [animation-delay:80ms]">
-        <h2 className="font-display text-xl font-semibold">
-          {fresh ? "What should we talk about?" : "What today?"}
+      <section className="mt-14 animate-rise [animation-delay:60ms]">
+        <h2 className="text-[15px] font-semibold">
+          Pick a topic
+          <span className="ko ml-2 font-normal text-muted">
+            오늘은 무슨 얘기를 해볼까요?
+          </span>
         </h2>
-        <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-4 grid gap-2.5 sm:grid-cols-2">
           {TOPICS.map((t, i) => {
             const done = profile.topicsPracticed.includes(t.id);
             return (
               <li
                 key={t.id}
-                className="animate-pop"
-                style={{ animationDelay: `${i * 35}ms` }}
+                className="animate-fade"
+                style={{ animationDelay: `${i * 25}ms` }}
               >
                 <button
                   onClick={() => onStart(t.id)}
-                  className="group h-full w-full rounded-blob border-2 border-line-strong bg-paper p-4 text-left shadow-sticker transition-all duration-150 hover:-translate-y-1 hover:border-grass hover:shadow-lift focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-lilac active:translate-y-0 active:shadow-none"
+                  className="group flex h-full w-full items-start gap-3 rounded-card border border-hair bg-card p-4 text-left shadow-card transition-all duration-150 hover:border-hair-strong hover:shadow-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <span
-                      aria-hidden
-                      className="grid size-12 place-items-center rounded-2xl bg-cream text-2xl transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6"
-                    >
-                      {t.emoji}
-                    </span>
-                    {done ? (
-                      <span className="rounded-full bg-grass-soft px-2 py-0.5 text-xs font-bold text-grass-ink">
-                        done ✓
+                  <span
+                    aria-hidden
+                    className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-md bg-sunk text-[15px]"
+                  >
+                    {t.emoji}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="text-[15px] font-semibold text-ink">
+                        {t.label}
                       </span>
-                    ) : null}
-                  </div>
-                  <p className="mt-3 font-display text-lg font-semibold">
-                    {t.label}
-                  </p>
-                  <p className="mt-0.5 text-sm leading-snug text-muted">
-                    {t.blurb}
-                  </p>
+                      {done ? (
+                        <span className="shrink-0 text-[12px] text-accent">
+                          완료
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="ko mt-0.5 block text-[13px] text-muted">
+                      {t.ko} · {t.blurb}
+                    </span>
+                  </span>
                 </button>
               </li>
             );
@@ -89,29 +90,23 @@ export function Home({
       </section>
 
       {!fresh ? (
-        <section className="mt-14 animate-rise [animation-delay:140ms]">
-          <h2 className="mb-4 font-display text-xl font-semibold">
-            How you&apos;re doing
+        <section className="mt-16 animate-rise [animation-delay:120ms]">
+          <h2 className="mb-4 text-[15px] font-semibold">
+            Your progress
+            <span className="ko ml-2 font-normal text-muted">기록</span>
           </h2>
           <Dashboard profile={profile} />
           <div className="mt-6 flex justify-end">
             <Button variant="quiet" onClick={onReset}>
-              Reset all progress
+              기록 전체 삭제
             </Button>
           </div>
         </section>
       ) : (
-        <Card
-          tint="bg-butter-soft"
-          className="mt-14 animate-rise p-6 [animation-delay:140ms]"
-        >
-          <p className="text-[15px] leading-relaxed text-ink/80">
-            <span aria-hidden className="mr-1.5">
-              🌱
-            </span>
-            Your streak, your words and your trophies show up here after your
-            first answer. Everything stays in this browser — no account, no
-            sign-up.
+        <Card className="mt-16 animate-rise p-5 [animation-delay:120ms]">
+          <p className="ko text-[14px] leading-relaxed text-muted">
+            연속 학습일, 배운 표현, 실수 추이, 레벨은 첫 답변을 마치면 여기에
+            나타납니다. 모든 기록은 이 브라우저에만 저장되고 계정은 필요 없어요.
           </p>
         </Card>
       )}

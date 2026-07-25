@@ -86,8 +86,9 @@ src/
 - **튜터 성격·피드백 규칙** → `src/lib/prompts.ts`
 - **토픽 추가** → `src/lib/topics.ts`
 - **트로피 조건** → `src/lib/store.ts`의 `newBadges()` + `Dashboard.tsx`의 `BADGE_LABELS`
-- **색상·폰트** → `src/app/globals.css`의 `@theme`. 크림 종이 배경 + 굵은 테두리 + 그림자 없는 입체 오프셋(스티커 느낌)이 톤의 핵심입니다. 폰트는 Fredoka(제목) + Nunito(본문).
-- **차트 색** → `Dashboard.tsx`의 `MARK` 상수. 흰 카드 배경 기준으로 색각이상·대비 검증을 통과한 값이니 바꾸면 재검증하세요.
+- **색상·폰트** → `src/app/globals.css`의 `@theme`. 클라우드 화이트(`#F7F8FA`) 배경에 1px 헤어라인과 여백으로만 층을 만듭니다. 강조색은 딥 틸 하나뿐이고, 의미가 있는 자리에만 씁니다. 폰트는 IBM Plex Sans KR 한 종류로 영문·한글을 모두 처리합니다.
+- **차트 색** → `Dashboard.tsx`의 `LINE`·`RAMP` 상수. `LINE`은 흰 카드 위 5.4:1 대비, `RAMP`는 밝기가 단조 감소하는 단일 색조 램프입니다. 바꾸면 두 성질을 유지하세요.
+- **표시 언어** → 학습 재료(질문·리라이트·표현·쉐도잉)는 영어, 설명(실수 이유·표현 뜻·레벨 코멘트)은 한국어입니다. 규칙은 `src/lib/prompts.ts`의 LANGUAGE 절에 있고, UI 문구는 각 컴포넌트에 직접 들어 있습니다.
 
 ## 참고
 
