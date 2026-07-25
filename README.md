@@ -89,6 +89,32 @@ src/
 - **색상·폰트** → `src/app/globals.css`의 `@theme`. 클라우드 화이트(`#F7F8FA`) 배경에 1px 헤어라인과 여백으로만 층을 만듭니다. 강조색은 딥 틸 하나뿐이고, 의미가 있는 자리에만 씁니다. 폰트는 IBM Plex Sans KR 한 종류로 영문·한글을 모두 처리합니다.
 - **차트 색** → `Dashboard.tsx`의 `LINE`·`RAMP` 상수. `LINE`은 흰 카드 위 5.4:1 대비, `RAMP`는 밝기가 단조 감소하는 단일 색조 램프입니다. 바꾸면 두 성질을 유지하세요.
 - **표시 언어** → 학습 재료(질문·리라이트·표현·쉐도잉)는 영어, 설명(실수 이유·표현 뜻·레벨 코멘트)은 한국어입니다. 규칙은 `src/lib/prompts.ts`의 LANGUAGE 절에 있고, UI 문구는 각 컴포넌트에 직접 들어 있습니다.
+- **영어 변종** → `src/lib/english.ts`. 기본은 호주·뉴질랜드 공통 영어입니다.
+
+## 영어 변종 (호주 / 뉴질랜드)
+
+가르치는 영어는 미국식이 아니라 **호주·뉴질랜드식**입니다. `.env.local`에서 조절합니다.
+
+```
+ENGLISH_VARIANT=both              # both(기본) | nz | au
+NEXT_PUBLIC_ENGLISH_VARIANT=both  # 쉐도잉 음성 선택용, 위와 같은 값으로
+```
+
+- `both` — 두 나라 공통 표현만. 한쪽에서만 쓰는 속어(arvo, sweet as, jandals 등)는 피합니다.
+- `nz` — sweet as, chur, tramping, the dairy, jandals, bach 쪽으로 기웁니다.
+- `au` — arvo, brekkie, servo, thongs, esky, "no dramas" 쪽으로 기웁니다.
+
+적용 범위:
+
+| | 내용 |
+|---|---|
+| 철자 | realise, colour, centre, travelled, maths, practise(동사)/practice(명사) 등 영연방식 |
+| 어휘 | lift(≠elevator), flat(≠apartment), holiday(≠vacation), uni, petrol, footpath, rubbish, queue, CV, mobile … |
+| 말투 | 과장 없이 담백하게. "awesome job", "you got this" 같은 미국식 응원과 느낌표 남발을 금지 |
+| 교정 | 학습자가 미국식 표현을 쓰면 그 자체를 실수로 잡아서 고쳐줍니다 |
+| 발음 | 쉐도잉 음성이 en-NZ → en-AU → en-GB 순으로 사용 가능한 목소리를 고릅니다 |
+
+속어를 과하게 넣지 않도록 프롬프트에 제한을 걸어뒀습니다. 실사용 영어가 목적이지 흉내가 목적이 아니라서요.
 
 ## 참고
 

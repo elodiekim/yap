@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Feedback } from "@/lib/types";
+import { PUBLIC_ENGLISH_VARIANT, voicePreference } from "@/lib/english";
 import { Card, SectionLabel } from "./ui";
 
 export function FeedbackView({ feedback }: { feedback: Feedback }) {
@@ -38,7 +39,7 @@ function Rewrite({ text }: { text: string }) {
       <div className="flex items-baseline justify-between gap-2">
         <SectionLabel
           step={2}
-          en="How a native would say it"
+          en="How a local would say it"
           ko="원어민이라면 이렇게"
         />
         <button
@@ -115,6 +116,23 @@ function Expressions({ feedback }: { feedback: Feedback }) {
   );
 }
 
+const VOICE_ORDER = voicePreference(PUBLIC_ENGLISH_VARIANT);
+
+/**
+ * Voices load asynchronously, so read the list at click time rather than on
+ * mount. Falls through en-NZ → en-AU → en-GB → any English; if the device has
+ * none of them, `lang` alone still nudges the default voice.
+ */
+function pickVoice(): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length === 0) return null;
+  for (const tag of VOICE_ORDER) {
+    const hit = voices.find((v) => v.lang.replace("_", "-").startsWith(tag));
+    if (hit) return hit;
+  }
+  return null;
+}
+
 function Shadowing({ lines }: { lines: string[] }) {
   const [speaking, setSpeaking] = useState<number | null>(null);
 
@@ -122,7 +140,9 @@ function Shadowing({ lines }: { lines: string[] }) {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "en-US";
+    const voice = pickVoice();
+    if (voice) u.voice = voice;
+    u.lang = voice?.lang ?? VOICE_ORDER[0];
     u.rate = 0.92;
     u.onend = () => setSpeaking(null);
     u.onerror = () => setSpeaking(null);
@@ -156,7 +176,7 @@ function Shadowing({ lines }: { lines: string[] }) {
         ))}
       </ul>
       <p className="ko mt-3 text-[13px] text-muted">
-        문장을 누르면 소리로 들려줍니다. 입에 붙을 때까지 따라 읽어보세요.
+        문장을 누르면 호주·뉴질랜드 발음으로 들려줍니다. 입에 붙을 때까지 따라 읽어보세요.
       </p>
     </Card>
   );
