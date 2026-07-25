@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateJSON } from "@/lib/claude";
+import { friendlyError, generateJSON } from "@/lib/llm";
 import { FEEDBACK_SCHEMA } from "@/lib/schemas";
 import { COACH_SYSTEM, profileBrief } from "@/lib/prompts";
 import { topicLabel } from "@/lib/topics";
@@ -64,29 +64,15 @@ export async function POST(req: Request) {
       ].join("\n"),
       schema: FEEDBACK_SCHEMA,
       effort: "medium",
-      // Thinking is on by default on Opus 5 and shares this budget with the
-      // response, so leave generous headroom or the JSON gets truncated.
+      // Reasoning shares this budget with the response on both providers, so
+      // leave headroom or the JSON gets truncated.
       maxTokens: 16000,
     });
 
     return NextResponse.json(feedback);
   } catch (err) {
     console.error("[/api/coach]", err);
-    return NextResponse.json({ error: message(err) }, { status: status(err) });
+    const { message, status } = friendlyError(err);
+    return NextResponse.json({ error: message }, { status });
   }
-}
-
-function message(err: unknown): string {
-  if (err instanceof Error) {
-    if (err.message.includes("api_key") || err.message.includes("authentication")) {
-      return "No Anthropic API key found. Add ANTHROPIC_API_KEY to .env.local and restart the dev server.";
-    }
-    return err.message;
-  }
-  return "Something went wrong.";
-}
-
-function status(err: unknown): number {
-  const s = (err as { status?: number } | null)?.status;
-  return typeof s === "number" ? s : 500;
 }

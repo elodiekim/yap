@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateJSON } from "@/lib/claude";
+import { friendlyError, generateJSON } from "@/lib/llm";
 import { PROMPT_SCHEMA } from "@/lib/schemas";
 import { QUESTION_SYSTEM, profileBrief } from "@/lib/prompts";
 import { topicLabel } from "@/lib/topics";
@@ -35,24 +35,7 @@ export async function POST(req: Request) {
     return NextResponse.json(prompt);
   } catch (err) {
     console.error("[/api/question]", err);
-    return NextResponse.json(
-      { error: message(err) },
-      { status: status(err) },
-    );
+    const { message, status } = friendlyError(err);
+    return NextResponse.json({ error: message }, { status });
   }
-}
-
-function message(err: unknown): string {
-  if (err instanceof Error) {
-    if (err.message.includes("api_key") || err.message.includes("authentication")) {
-      return "No Anthropic API key found. Add ANTHROPIC_API_KEY to .env.local and restart the dev server.";
-    }
-    return err.message;
-  }
-  return "Something went wrong.";
-}
-
-function status(err: unknown): number {
-  const s = (err as { status?: number } | null)?.status;
-  return typeof s === "number" ? s : 500;
 }

@@ -1,10 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
+import type { GenerateOptions } from "./llm";
 
-export const MODEL = "claude-opus-5";
+export const CLAUDE_MODEL = process.env.CLAUDE_MODEL ?? "claude-opus-5";
 
 let cached: Anthropic | null = null;
 
-export function claude(): Anthropic {
+function claude(): Anthropic {
   if (!cached) {
     // Resolves ANTHROPIC_API_KEY (or ANTHROPIC_AUTH_TOKEN / an `ant auth login`
     // profile) from the environment — never hardcode a key.
@@ -17,17 +18,15 @@ export function claude(): Anthropic {
  * Runs a request with structured output and returns the parsed JSON.
  * Streams so that long generations never hit an HTTP timeout.
  */
-export async function generateJSON<T>(opts: {
-  system: string;
-  user: string;
-  schema: Record<string, unknown>;
-  effort?: "low" | "medium" | "high";
-  maxTokens?: number;
-}): Promise<T> {
+export async function generateJSONWithClaude<T>(
+  opts: GenerateOptions,
+): Promise<T> {
   const stream = claude().messages.stream({
-    model: MODEL,
+    model: CLAUDE_MODEL,
     max_tokens: opts.maxTokens ?? 8000,
-    system: [{ type: "text", text: opts.system, cache_control: { type: "ephemeral" } }],
+    system: [
+      { type: "text", text: opts.system, cache_control: { type: "ephemeral" } },
+    ],
     output_config: {
       effort: opts.effort ?? "medium",
       format: { type: "json_schema", schema: opts.schema },
