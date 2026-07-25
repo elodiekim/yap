@@ -25,7 +25,7 @@ Yap은 이 셋을 고정된 제품으로 만든 것이다. 특히 3번 — **질
 **나 혼자 쓴다.** 개인용이다. 이 결정이 아래를 전부 좌우한다.
 
 - 온보딩, 튜토리얼, 랜딩 페이지, 요금제 → **없음**
-- 로그인은 "여러 사용자를 구분하려고"가 아니라 **내 기기끼리 기록을 잇고, 남이 내 API 비용을 태우지 못하게 막으려고** 있다
+- 로그인 → **없음.** 노트북에서만 돌리니 구분할 사용자도, 막을 외부 접근도 없다 (7절)
 - 사용자별 rate limit, 어뷰징 방어, 콘텐츠 신고 → 지금은 불필요
 - 나중에 남에게 열고 싶어지면 그때 다시 기획한다. 지금 미리 만들지 않는다
 
@@ -88,99 +88,94 @@ Yap은 이 셋을 고정된 제품으로 만든 것이다. 특히 3번 — **질
 | 문제 | 결과 |
 |---|---|
 | 브라우저 데이터 삭제 | 전부 소멸. 복구 불가 |
-| 브라우저·기기마다 별도 저장 | 노트북 크롬과 폰 사파리가 각자 다른 streak을 셈 |
 | **사파리 7일 규칙** | WebKit은 7일간 방문이 없으면 스크립트가 저장한 데이터를 삭제한다 |
 | 시크릿 모드 | 창 닫으면 소멸 |
+| 브라우저마다 별도 저장 | 크롬에서 쌓은 기록이 사파리엔 없음 |
 
 사파리 항목이 결정적이다. 이 앱의 동기 부여 장치는 연속 학습일인데, **일주일 쉬었다고 30일 기록이 0이 되면** 다시 시작할 이유가 사라진다. 습관 앱에서 이건 치명적이다.
 
-덤으로 하나 더 해결된다. 지금 API 라우트에는 인증이 없어서, 공개 배포하면 **주소를 아는 누구나 내 Gemini 키로 요청을 보낼 수 있다.** 로그인을 붙이면 저장 문제와 이 문제가 한 번에 해결된다.
+## 7. 스택 결정 — 로컬 SQLite
 
-## 7. 스택 결정
+**`node:sqlite`로 노트북에 파일 하나.** 의존성 추가 없음, 서버 없음, 로그인 없음.
 
-**Supabase** (Postgres + Auth 한 벤더).
+이 결정은 3절에서 나온다. **노트북에서만 쓴다.** 폰에서 안 쓰면 기록을 인터넷에 올릴 이유가 없고, 인터넷에 안 올리면 배포할 이유가 없고, 배포를 안 하면 로그인이 필요 없다. 인증은 저장 문제를 풀려고 있었던 게 아니라 **공개 배포의 부작용을 막으려고** 있었던 것이다. 배포를 안 하면 그 부작용 자체가 없다.
 
-| | 선택 이유 |
-|---|---|
-| Supabase | DB와 인증이 한 곳. 관리할 벤더가 하나. Next.js 연동 문서가 잘 돼 있음 |
-| ~~Neon + Auth.js~~ | 각각은 좋지만 설정할 조각이 두 배. 개인 프로젝트엔 과함 |
-| ~~Turso (SQLite)~~ | 가볍지만 인증을 따로 붙여야 함 |
+| | 로컬 SQLite | ~~Supabase~~ |
+|---|---|---|
+| 준비물 | 없음. Node 22.5+ 내장 | 프로젝트 생성, 구글 OAuth, RLS 정책, 세션 처리, 가입 차단 |
+| 의존성 | **0개** | `@supabase/supabase-js`, `@supabase/ssr` |
+| 로그인 | 불필요 | 필수 |
+| 폰에서 접속 | 안 됨 | 됨 |
+| 백업 | **직접 해야 함** | 벤더가 함 |
 
-무료 티어 (2026-07 기준, [공식 페이지](https://supabase.com/pricing) 확인):
+`node:sqlite`는 Node 22.5부터 표준 라이브러리다 (현재 로컬 Node v23.7.0에서 동작 확인). `better-sqlite3` 같은 네이티브 모듈도 필요 없다.
 
-- DB 500MB · 인증 50,000 MAU · egress 5GB · 파일 1GB · 활성 프로젝트 2개
-- **1주일간 활동이 없으면 프로젝트가 일시정지된다** (대시보드에서 복구 가능)
+**대신 백업은 내 책임이 된다.** 노트북이 죽으면 기록도 죽는다. DB 파일을 iCloud/Dropbox 동기화 폴더에 두거나 주기적으로 복사하는 것으로 충분하다 — 파일 하나다.
 
-세션 1건이 대략 2~4KB다. 500MB면 현실적으로 안 찬다. 일시정지 조건은 매일 쓰는 앱이라 걸릴 일이 없고, 걸려도 클릭 한 번이다.
+폰에서 쓰고 싶어지면 그때 Supabase로 옮긴다. 8절 스키마를 Postgres 문법으로 바꾸고 `user_id` 컬럼을 더하면 되게 설계해 둔다.
 
 ## 8. 데이터 모델
 
 원칙: **`sessions`가 사실의 원본이고, 나머지 통계는 전부 계산해서 얻는다.** 지금처럼 집계값을 따로 들고 다니면 언젠가 어긋난다.
 
+파일 위치는 `data/yap.db` (gitignore 대상). 열 때 `pragma journal_mode = WAL`과 `pragma foreign_keys = ON`을 건다.
+
 ```sql
-create table profiles (
-  id               uuid primary key references auth.users on delete cascade,
+create table if not exists profile (          -- 한 줄만 존재
+  id               integer primary key check (id = 1),
   level            text not null default 'B1' check (level in ('A2','B1','B2','C1')),
-  english_variant  text not null default 'anz' check (english_variant in ('anz','nz','au','us')),
-  timezone         text not null default 'Asia/Seoul',
-  created_at       timestamptz not null default now(),
-  updated_at       timestamptz not null default now()
+  english_variant  text not null default 'anz',
+  updated_at       text not null default (datetime('now'))
 );
 
-create table sessions (
-  id             uuid primary key default gen_random_uuid(),
-  user_id        uuid not null references auth.users on delete cascade,
-  practised_on   date not null,          -- 사용자 로컬 기준 날짜. streak의 근거
+create table if not exists sessions (
+  id             integer primary key autoincrement,
+  practised_on   text not null,           -- 'YYYY-MM-DD', 로컬 기준 날짜. streak의 근거
   topic          text,
   question       text,
   answer         text,
-  word_count     int  not null default 0,
-  mistake_count  int  not null default 0, -- 추이 그래프용 비정규화
+  word_count     integer not null default 0,
+  mistake_count  integer not null default 0,  -- 추이 그래프용 비정규화
   level          text check (level in ('A2','B1','B2','C1')),
-  feedback       jsonb,                   -- 응답 원본 전체
+  feedback       text,                    -- 응답 JSON 원본 전체
   source         text not null default 'live' check (source in ('live','import')),
-  created_at     timestamptz not null default now()
+  created_at     text not null default (datetime('now'))
 );
-create index on sessions (user_id, practised_on);
+create index if not exists sessions_day on sessions (practised_on);
 
-create table expressions (
-  id          uuid primary key default gen_random_uuid(),
-  user_id     uuid not null references auth.users on delete cascade,
-  session_id  uuid references sessions on delete set null,
+create table if not exists expressions (
+  id          integer primary key autoincrement,
+  session_id  integer references sessions(id) on delete set null,
   phrase      text not null,
   meaning     text not null,
   example     text not null,
-  created_at  timestamptz not null default now()
+  created_at  text not null default (datetime('now'))
 );
-create unique index expressions_user_phrase on expressions (user_id, lower(phrase));
+create unique index if not exists expressions_phrase on expressions (lower(phrase));
 
-create table mistakes (
-  id          uuid primary key default gen_random_uuid(),
-  user_id     uuid not null references auth.users on delete cascade,
-  session_id  uuid not null references sessions on delete cascade,
+create table if not exists mistakes (
+  id          integer primary key autoincrement,
+  session_id  integer not null references sessions(id) on delete cascade,
   tag         text not null,
   original    text not null,
   better      text not null,
-  reason      text not null,
-  created_at  timestamptz not null default now()
+  reason      text not null
 );
-create index on mistakes (user_id, tag);
+create index if not exists mistakes_tag on mistakes (tag);
 
-create table badges (
-  user_id   uuid not null references auth.users on delete cascade,
-  badge_id  text not null,
-  earned_at timestamptz not null default now(),
-  primary key (user_id, badge_id)
+create table if not exists badges (
+  badge_id   text primary key,
+  earned_at  text not null default (datetime('now'))
 );
 ```
 
 설계 판단 세 가지:
 
-**`practised_on`을 `date`로 따로 둔다.** `created_at`에서 뽑으면 안 된다. 한국 시간 새벽 12시 30분 세션은 UTC로는 전날이라 streak이 하루 어긋난다. 클라이언트가 계산한 로컬 날짜를 그대로 저장한다.
+**`practised_on`을 따로 저장한다.** `created_at`에서 뽑으면 안 된다. SQLite의 `datetime('now')`는 UTC라, 한국 시간 새벽 12시 30분 세션은 전날로 기록돼 streak이 하루 어긋난다. 클라이언트가 계산한 로컬 날짜를 그대로 넣는다.
 
-**`feedback`을 jsonb로 통째로 남긴다.** 정규화한 테이블과 중복이지만, 지난 세션을 그대로 다시 렌더링할 수 있고 나중에 "이것도 뽑아둘 걸" 할 때 원본이 남아 있다. 세션당 몇 KB의 보험.
+**`feedback`을 JSON 문자열로 통째로 남긴다.** 정규화한 테이블과 중복이지만, 지난 세션을 그대로 다시 렌더링할 수 있고 나중에 "이것도 뽑아둘 걸" 할 때 원본이 남아 있다. 세션당 몇 KB의 보험.
 
-**`expressions`에 `(user_id, lower(phrase))` 유니크.** "이미 가르친 표현 다시 가르치지 않기"가 DB 제약으로 강제된다.
+**`expressions`에 `lower(phrase)` 유니크.** "이미 가르친 표현 다시 가르치지 않기"가 DB 제약으로 강제된다.
 
 ### 계산으로 얻는 것 (테이블 없음)
 
@@ -196,11 +191,17 @@ create table badges (
 
 ## 9. 아키텍처
 
-### 인증
+### 인증 — 없음
 
-Supabase Auth + 구글 로그인. 개인용이므로 **내 계정을 만든 직후 대시보드에서 신규 가입을 차단한다** (Authentication → 회원가입 비활성화). 이게 API 비용을 막는 가장 단순하고 확실한 장치다.
+로컬에서만 도는 앱이라 로그인이 없다. `next dev`는 기본으로 localhost에만 바인딩되므로 외부에서 접근할 수 없고, 따라서 내 Gemini 키를 남이 쓸 경로도 없다.
 
-모든 테이블에 RLS를 켜고 `auth.uid() = user_id` 정책을 건다. 개인용이라도 켠다 — 키가 노출됐을 때의 마지막 방어선이고, 나중에 다인용으로 열 때 다시 설계하지 않아도 된다.
+**이 전제가 깨지는 순간이 두 개 있고, 둘 다 하면 안 된다.** (1) `next dev --hostname 0.0.0.0`으로 띄워 같은 와이파이에 노출하는 것, (2) Vercel 등에 배포하는 것. 둘 중 하나라도 하려면 그 전에 인증을 붙여야 한다. 11절 참고.
+
+### DB 접근
+
+`src/lib/db.ts`가 `DatabaseSync` 인스턴스 하나를 들고, 처음 열 때 8절 스키마를 실행한다 (`create table if not exists`라 매번 안전하다). 개발 서버는 코드가 바뀔 때마다 모듈을 다시 불러오므로 **인스턴스를 `globalThis`에 캐시해서** 핫 리로드마다 파일을 다시 여는 것을 막는다.
+
+`node:sqlite`는 동기 API다. 라우트 안에서 그냥 호출하면 된다 — 로컬 파일이라 지연이 마이크로초 단위고, 사용자가 한 명이라 경합도 없다.
 
 ### API 라우트
 
@@ -214,11 +215,13 @@ Supabase Auth + 구글 로그인. 개인용이므로 **내 계정을 만든 직�
                                         <──  피드백 + 새로 딴 트로피
 ```
 
-이렇게 하면 페이로드가 줄고, 통계 위조가 불가능해지고, 저장 누락이 없어진다(피드백을 받았는데 저장에 실패하는 창이 사라진다). 트로피 판정도 서버에서 한다 — 규칙은 `src/lib/store.ts`의 `newBadges()`를 그대로 옮긴다.
+혼자 쓰는 앱이라 위조 방지는 이유가 아니다. **저장 누락을 없애는 게 이유다.** 지금은 피드백을 받은 뒤 브라우저가 따로 저장하는데, 그 사이에 탭을 닫으면 방금 한 연습이 사라진다. 서버가 응답을 돌려주기 전에 저장하면 그 창이 없어진다. 페이로드가 줄어드는 건 덤이다.
+
+트로피 판정도 서버로 옮긴다 — 규칙은 `src/lib/store.ts`의 `newBadges()`를 그대로 가져오면 된다.
 
 ### 기존 기록 이전
 
-`localStorage`에 기록이 남아 있으면 첫 로그인 때 한 번 업로드한다.
+`localStorage`에 기록이 남아 있으면 첫 실행 때 한 번 가져온다.
 
 가져올 수 있는 것: 레벨, 연습한 날짜들, 대화 수, 단어 수, 세션별 실수 개수, 배운 표현, 획득한 트로피.
 
@@ -230,7 +233,8 @@ Supabase Auth + 구글 로그인. 개인용이므로 **내 계정을 만든 직�
 
 - **음성 입력 (말하기 → STT).** 이름은 "말하기 연습"이지만 지금은 타이핑이다. 쓰면서 생각을 정리하는 단계가 오히려 도움이 되고, STT를 붙이면 정확도 문제로 피드백 품질이 흔들린다.
 - **소셜 기능.** 랭킹, 친구, 공유. 혼자 쓰는 앱이다.
-- **모바일 앱.** 반응형 웹으로 충분하다.
+- **배포와 로그인.** 노트북에서 `npm run dev`로 쓴다. 7절 참고 — 이걸 안 하는 대가로 인증·RLS·벤더 관리가 통째로 빠진다.
+- **폰 지원.** 위와 같은 이유. 폰에서 쓰고 싶어지면 그때 Supabase로 옮긴다.
 - **결제.**
 - **여러 언어 학습.** 영어만.
 - **오프라인 모드.** 어차피 매 세션 API 호출이 필요하다.
@@ -239,16 +243,24 @@ Supabase Auth + 구글 로그인. 개인용이므로 **내 계정을 만든 직�
 
 | 리스크 | 정도 | 대응 |
 |---|---|---|
-| **Gemini 무료 한도** — 실측 하루 20회에서 429 | 높음. 이미 겪음 | 하루 20세션이면 개인 사용엔 충분. 부족해지면 유료 전환하거나 `LLM_PROVIDER=claude`로 전환 |
-| 인증 없이 공개 배포 시 API 비용 노출 | 높음 | 9절 — 로그인 + 신규 가입 차단. **배포 전 필수** |
-| Supabase 1주일 미사용 시 일시정지 | 낮음 | 매일 쓰는 앱. 걸려도 대시보드에서 복구 |
+| **노트북이 죽으면 기록도 죽는다** | 높음 | 로컬 저장을 택한 대가. `data/yap.db`를 동기화 폴더에 두거나 주기적으로 복사. 파일 하나다 |
+| **Gemini 무료 한도** — `limit: 20`에서 429 | 높음. 이미 겪음 | 한 대화가 요청 1 + 답변 수만큼이라 하루 서너 판. 부족하면 `GEMINI_MODEL`을 lite로 바꾸거나 유료 전환. 정확한 한도는 [AI Studio 대시보드](https://aistudio.google.com/rate-limit)에서 확인 |
+| 배포하거나 `--hostname 0.0.0.0`으로 띄우면 API 키가 열린다 | 높음 | **인증 없는 지금 구조에서는 하지 않는다.** 하려면 그 전에 로그인을 붙인다 (9절) |
 | 모델이 지정한 영어 변종을 못 지킴 | 중간 | 프롬프트에 명시 + 실제 호출로 검증. 변종 추가 시 재확인 |
-| 마이그레이션 중 기존 기록 유실 | 중간 | 업로드 성공 확인 전까지 `localStorage`를 지우지 않는다 |
+| 마이그레이션 중 기존 기록 유실 | 중간 | DB 저장 성공을 확인하기 전까지 `localStorage`를 지우지 않는다 |
+
+### 비용 (2026-07 실측 기준)
+
+프롬프트 실측: 피드백 시스템 1,763토큰 / 질문 시스템 1,506토큰. 단가는 3.6 Flash 유료 기준 입력 $1.50, 출력 $7.50 per 1M (사고 토큰은 출력 단가).
+
+대화 한 판(답변 5개) 약 $0.10, **매일 한 판이면 월 $3 안팎.** 무료 티어에 머물면 $0. 호스팅도 DB도 없으니 이게 전부다.
+
+**프롬프트를 줄이는 최적화는 하지 않는다.** 입력은 전체 비용의 15% 남짓이라 절반으로 줄여도 월 100원 수준이고, 무엇보다 지금 병목은 토큰이 아니라 요청 수라서 아무 효과가 없다. 비용이 문제가 되면 `thinking_level`을 낮추는 쪽이 유일하게 의미 있는 레버다.
 
 ## 12. 로드맵
 
 **1단계 — 저장 (지금 할 것)**
-Supabase 프로젝트 생성 → 스키마 + RLS → 구글 로그인 → 라우트를 서버 조회 방식으로 전환 → 기존 기록 이전 → 신규 가입 차단 후 배포
+`src/lib/db.ts` (스키마 + 싱글턴) → 라우트를 DB 조회·저장 방식으로 전환 → `store.ts`를 서버 데이터 소비로 교체 → 기존 `localStorage` 기록 1회 이전 → `data/`를 gitignore
 
 **2단계 — 복습**
 지난 세션 다시 보기(전문이 쌓인 뒤에야 의미가 있음). 반복 실수 태그 상위 항목을 다음 질문에 반영. 배운 표현 목록 페이지.
