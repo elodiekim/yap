@@ -1,0 +1,324 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { LEVELS, type Profile } from "@/lib/types";
+import { mistakeTrend, streak, wordsToday } from "@/lib/store";
+import { Card, Pill, SectionLabel } from "./ui";
+
+/**
+ * Data-mark colors, validated against the dark chart surface (#101317) with
+ * scripts/validate_palette.js — all six checks pass. UI accent tokens (mint,
+ * violet, amber) are lighter and are used for text/chrome only, never as marks.
+ */
+const MARK = {
+  teal: "#0d9488",
+  violet: "#8b5cf6",
+  amber: "#d97706",
+};
+
+export function Dashboard({ profile }: { profile: Profile }) {
+  const days = streak(profile.days);
+  const trend = useMemo(() => mistakeTrend(profile), [profile]);
+
+  return (
+    <div className="space-y-4">
+      <StreakHero days={days} wordsToday={wordsToday(profile)} />
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat label="Days practised" value={profile.days.length} />
+        <Stat label="Conversations" value={profile.totalConversations} />
+        <Stat label="Words written" value={profile.totalWords.toLocaleString()} />
+        <Stat label="Expressions learned" value={profile.vocab.length} />
+      </div>
+
+      <LevelMeter profile={profile} />
+      <MistakeTrend trend={trend} />
+      <Badges profile={profile} />
+    </div>
+  );
+}
+
+function StreakHero({ days, wordsToday }: { days: number; wordsToday: number }) {
+  return (
+    <Card className="p-6" accent="rgba(217,119,6,0.5)">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-faint">
+            Current streak
+          </p>
+          <p className="mt-2 flex items-baseline gap-2">
+            <span
+              className="text-6xl font-semibold tabular-nums tracking-tight"
+              style={{ color: MARK.amber }}
+            >
+              {days}
+            </span>
+            <span className="text-lg text-muted">
+              {days === 1 ? "day" : "days"}
+            </span>
+            <span aria-hidden className="text-3xl">
+              {days > 0 ? "🔥" : "🌱"}
+            </span>
+          </p>
+        </div>
+        <p className="max-w-[22rem] text-sm leading-relaxed text-muted">
+          {days === 0
+            ? "Nothing yet today. One answer is all it takes to start a streak."
+            : `${wordsToday} words today. Every day, one more sentence than yesterday.`}
+        </p>
+      </div>
+    </Card>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number | string }) {
+  return (
+    <Card className="p-4">
+      <p className="text-3xl font-semibold tabular-nums tracking-tight text-fg">
+        {value}
+      </p>
+      <p className="mt-1 text-xs leading-snug text-faint">{label}</p>
+    </Card>
+  );
+}
+
+function LevelMeter({ profile }: { profile: Profile }) {
+  const idx = LEVELS.indexOf(profile.level);
+  return (
+    <Card className="p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <SectionLabel color="var(--color-violet)">CEFR progress</SectionLabel>
+        <Pill tone="violet">Now: {profile.level}</Pill>
+      </div>
+      <ol className="mt-4 grid grid-cols-4 gap-2">
+        {LEVELS.map((lv, i) => {
+          const reached = i <= idx;
+          return (
+            <li key={lv}>
+              <div
+                className="h-2 rounded-full transition-colors duration-500"
+                style={{
+                  background: reached ? MARK.violet : "var(--color-line)",
+                  opacity: reached ? 0.35 + (i / 3) * 0.65 : 1,
+                }}
+              />
+              <p
+                className={`mt-2 font-mono text-sm ${
+                  i === idx ? "font-semibold text-fg" : "text-faint"
+                }`}
+              >
+                {lv}
+              </p>
+            </li>
+          );
+        })}
+      </ol>
+      {profile.levelHistory.length > 1 ? (
+        <p className="mt-3 text-xs text-faint">
+          Started at {profile.levelHistory[0].level} on{" "}
+          {profile.levelHistory[0].date}.
+        </p>
+      ) : null}
+    </Card>
+  );
+}
+
+function MistakeTrend({ trend }: { trend: { date: string; avg: number }[] }) {
+  const [hover, setHover] = useState<number | null>(null);
+  const [showTable, setShowTable] = useState(false);
+
+  if (trend.length < 3) {
+    return (
+      <Card className="p-5">
+        <SectionLabel>Major mistakes per answer</SectionLabel>
+        <p className="mt-3 text-sm leading-relaxed text-muted">
+          Finish {3 - trend.length} more{" "}
+          {3 - trend.length === 1 ? "answer" : "answers"} and Yap will start
+          charting whether your mistakes are going down.
+        </p>
+      </Card>
+    );
+  }
+
+  const W = 640;
+  const H = 120;
+  const PAD = { t: 14, r: 14, b: 14, l: 14 };
+  const max = Math.max(2, ...trend.map((t) => t.avg));
+  const x = (i: number) =>
+    PAD.l + (i / (trend.length - 1)) * (W - PAD.l - PAD.r);
+  const y = (v: number) => PAD.t + (1 - v / max) * (H - PAD.t - PAD.b);
+
+  const path = trend.map((t, i) => `${i ? "L" : "M"}${x(i)},${y(t.avg)}`).join(" ");
+  const last = trend[trend.length - 1];
+  const first = trend[0];
+  const delta = last.avg - first.avg;
+  const active = hover === null ? trend.length - 1 : hover;
+
+  return (
+    <Card className="p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <SectionLabel>Major mistakes per answer</SectionLabel>
+        <button
+          onClick={() => setShowTable((s) => !s)}
+          className="text-xs text-faint transition-colors hover:text-fg"
+        >
+          {showTable ? "Show chart" : "Show table"}
+        </button>
+      </div>
+
+      <p className="mt-2 text-sm text-muted">
+        {delta < -0.3 ? (
+          <>
+            Down from {first.avg.toFixed(1)} to{" "}
+            <span className="font-semibold text-fg">{last.avg.toFixed(1)}</span> —
+            you&apos;re making fewer mistakes than when you started. 📉
+          </>
+        ) : delta > 0.3 ? (
+          <>
+            Up to <span className="font-semibold text-fg">{last.avg.toFixed(1)}</span>{" "}
+            — usually a sign you&apos;re attempting harder sentences. That&apos;s
+            good.
+          </>
+        ) : (
+          <>
+            Holding steady around{" "}
+            <span className="font-semibold text-fg">{last.avg.toFixed(1)}</span> per
+            answer.
+          </>
+        )}
+      </p>
+
+      {showTable ? (
+        <table className="mt-4 w-full text-sm">
+          <caption className="sr-only">
+            Rolling average of major mistakes per answer, by date
+          </caption>
+          <thead>
+            <tr className="text-left text-xs uppercase tracking-wider text-faint">
+              <th className="pb-2 font-medium">Date</th>
+              <th className="pb-2 text-right font-medium">Avg mistakes</th>
+            </tr>
+          </thead>
+          <tbody className="text-muted">
+            {trend.map((t, i) => (
+              <tr key={i} className="border-t border-line-soft">
+                <td className="py-1.5 font-mono text-xs">{t.date}</td>
+                <td className="py-1.5 text-right tabular-nums">
+                  {t.avg.toFixed(1)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <figure className="mt-4">
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            className="w-full"
+            role="img"
+            aria-label={`Rolling average of major mistakes per answer over the last ${trend.length} sessions, from ${first.avg.toFixed(1)} to ${last.avg.toFixed(1)}.`}
+            onMouseLeave={() => setHover(null)}
+          >
+            <line
+              x1={PAD.l}
+              x2={W - PAD.r}
+              y1={H - PAD.b}
+              y2={H - PAD.b}
+              stroke="var(--color-line)"
+              strokeWidth={1}
+            />
+            <path
+              d={path}
+              fill="none"
+              stroke={MARK.teal}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <circle
+              cx={x(active)}
+              cy={y(trend[active].avg)}
+              r={5}
+              fill={MARK.teal}
+              stroke="var(--color-surface)"
+              strokeWidth={2}
+            />
+            {trend.map((t, i) => (
+              <rect
+                key={i}
+                x={x(i) - (W / trend.length) / 2}
+                y={0}
+                width={W / trend.length}
+                height={H}
+                fill="transparent"
+                onMouseEnter={() => setHover(i)}
+              />
+            ))}
+          </svg>
+          <figcaption className="mt-2 flex items-center justify-between text-xs text-faint">
+            <span className="font-mono">{first.date}</span>
+            <span className="text-muted">
+              {trend[active].date}: {trend[active].avg.toFixed(1)} mistakes
+            </span>
+            <span className="font-mono">{last.date}</span>
+          </figcaption>
+        </figure>
+      )}
+    </Card>
+  );
+}
+
+const BADGE_LABELS: Record<string, { emoji: string; label: string }> = {
+  "first-yap": { emoji: "🌱", label: "First yap" },
+  "streak-3": { emoji: "🔥", label: "3-day streak" },
+  "streak-7": { emoji: "🔥", label: "7-day streak" },
+  "streak-14": { emoji: "🔥", label: "14-day streak" },
+  "streak-30": { emoji: "🔥", label: "30-day streak" },
+  "streak-100": { emoji: "🔥", label: "100-day streak" },
+  "talks-10": { emoji: "💬", label: "10 conversations" },
+  "talks-25": { emoji: "💬", label: "25 conversations" },
+  "talks-50": { emoji: "💬", label: "50 conversations" },
+  "talks-100": { emoji: "💬", label: "100 conversations" },
+  "words-100": { emoji: "✍️", label: "100 words in a day" },
+  "words-200": { emoji: "🏆", label: "200 words in a day" },
+  "vocab-10": { emoji: "⭐", label: "10 expressions" },
+  "vocab-30": { emoji: "🌟", label: "30 expressions" },
+  "vocab-75": { emoji: "💎", label: "75 expressions" },
+  flawless: { emoji: "🎯", label: "Nothing to fix" },
+  "topics-5": { emoji: "🗺️", label: "5 topics" },
+  "topics-all": { emoji: "🧭", label: "Every topic" },
+  "level-B1": { emoji: "🚀", label: "Reached B1" },
+  "level-B2": { emoji: "🚀", label: "Reached B2" },
+  "level-C1": { emoji: "🚀", label: "Reached C1" },
+};
+
+function Badges({ profile }: { profile: Profile }) {
+  return (
+    <Card className="p-5">
+      <SectionLabel color="var(--color-amber)">
+        Trophies ({profile.badges.length})
+      </SectionLabel>
+      {profile.badges.length === 0 ? (
+        <p className="mt-3 text-sm text-muted">
+          None yet. Your first one is one answer away.
+        </p>
+      ) : (
+        <ul className="mt-4 flex flex-wrap gap-2">
+          {profile.badges.map((id) => {
+            const b = BADGE_LABELS[id];
+            if (!b) return null;
+            return (
+              <li
+                key={id}
+                className="flex items-center gap-2 rounded-xl border border-line bg-surface-2/60 px-3 py-2 text-sm text-fg/90"
+              >
+                <span aria-hidden>{b.emoji}</span>
+                {b.label}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
+  );
+}
