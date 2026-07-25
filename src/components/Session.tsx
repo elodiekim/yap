@@ -20,6 +20,40 @@ interface Props {
   onExit: () => void;
 }
 
+/**
+ * In-flight opening-question requests, keyed by topic.
+ *
+ * React Strict Mode runs effects twice in development, and a cancelled flag in
+ * the cleanup only discards the result — the request still goes out. That was
+ * spending two Gemini calls per topic against a 20-a-day free tier. Sharing the
+ * promise means the second invocation reuses the first request; clearing the
+ * entry once it settles keeps a later visit to the same topic getting a fresh
+ * question.
+ */
+const inFlight = new Map<string, Promise<Prompt>>();
+
+function askQuestion(topic: string): Promise<Prompt> {
+  const existing = inFlight.get(topic);
+  if (existing) return existing;
+
+  const request = fetch("/api/question", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    // Read the store directly: the profile prop changes as answers land, and
+    // depending on it in the effect would refetch the opening question.
+    body: JSON.stringify({ topic, profile: getProfileSnapshot() }),
+  }).then(async (r) => {
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error ?? "Couldn't get a question.");
+    return data as Prompt;
+  });
+
+  inFlight.set(topic, request);
+  // Settle-only cleanup; the caller owns the rejection, so swallow it here.
+  request.catch(() => {}).finally(() => inFlight.delete(topic));
+  return request;
+}
+
 export function Session({ topic, profile, onBadges, onExit }: Props) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [prompt, setPrompt] = useState<Prompt | null>(null);
@@ -34,18 +68,7 @@ export function Session({ topic, profile, onBadges, onExit }: Props) {
   // rather than synchronously here.
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/question", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      // Read the store directly: the profile prop changes as answers land, and
-      // depending on it here would refetch the opening question.
-      body: JSON.stringify({ topic, profile: getProfileSnapshot() }),
-    })
-      .then(async (r) => {
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error ?? "Couldn't get a question.");
-        return data as Prompt;
-      })
+    askQuestion(topic)
       .then((p) => {
         if (!cancelled) setPrompt(p);
       })
