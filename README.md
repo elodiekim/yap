@@ -50,6 +50,23 @@ npm run dev
 
 `data/yap.db` (로컬 SQLite 파일 하나, gitignore 대상). 계정도 서버도 없습니다 — Node 내장 `node:sqlite`를 써서 추가 의존성도 없습니다.
 
+### 기록 들여다보기
+
+```bash
+npm run db          # 요약 + 최근 세션 + 배운 표현 + 자주 틀리는 패턴
+npm run db -- 12    # 12번 세션 전문 (질문 / 답변 / 피드백 전체)
+```
+
+SQL을 직접 쓰고 싶으면 macOS에 이미 들어 있는 `sqlite3`로:
+
+```bash
+sqlite3 data/yap.db
+sqlite> .tables
+sqlite> select practised_on, topic, word_count from sessions order by id desc limit 5;
+```
+
+테이블은 `sessions` / `expressions` / `mistakes` / `badges` / `profile` 다섯 개입니다. 구조는 [기획서 8절](docs/product-spec.md)에 있습니다.
+
 ### 백업
 
 `.env.local`에 백업 경로를 넣으면 **세션이 저장될 때마다 자동으로 스냅샷을 뜹니다.** 따로 하실 게 없습니다.
