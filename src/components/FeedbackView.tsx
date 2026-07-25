@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import type { Feedback } from "@/lib/types";
-import { PUBLIC_ENGLISH_VARIANT, voicePreference } from "@/lib/english";
+import {
+  PUBLIC_ENGLISH_VARIANT,
+  variantKo,
+  voicePreference,
+} from "@/lib/english";
 import { Card, SectionLabel } from "./ui";
 
 export function FeedbackView({ feedback }: { feedback: Feedback }) {
@@ -117,11 +121,12 @@ function Expressions({ feedback }: { feedback: Feedback }) {
 }
 
 const VOICE_ORDER = voicePreference(PUBLIC_ENGLISH_VARIANT);
+const VARIANT_KO = variantKo(PUBLIC_ENGLISH_VARIANT);
 
 /**
  * Voices load asynchronously, so read the list at click time rather than on
- * mount. Falls through en-NZ → en-AU → en-GB → any English; if the device has
- * none of them, `lang` alone still nudges the default voice.
+ * mount. Falls through the variant's preferred accents to any English; if the
+ * device has none of them, `lang` alone still nudges the default voice.
  */
 function pickVoice(): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
@@ -176,7 +181,8 @@ function Shadowing({ lines }: { lines: string[] }) {
         ))}
       </ul>
       <p className="ko mt-3 text-[13px] text-muted">
-        문장을 누르면 호주·뉴질랜드 발음으로 들려줍니다. 입에 붙을 때까지 따라 읽어보세요.
+        문장을 누르면 {VARIANT_KO}식 발음으로 들려줍니다. 입에 붙을 때까지 따라
+        읽어보세요.
       </p>
     </Card>
   );

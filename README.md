@@ -76,6 +76,7 @@ src/
     gemini.ts             Gemini 호출 (structured output)
     claude.ts             Claude 호출 (structured output)
     prompts.ts            튜터 페르소나와 피드백 규칙 (톤 수정은 여기서)
+    english.ts            영어 변종 규칙 (호주·뉴질랜드 / 미국)
     schemas.ts            응답 JSON 스키마
     store.ts              localStorage 외부 스토어, streak/뱃지 계산
     types.ts, topics.ts
@@ -89,32 +90,38 @@ src/
 - **색상·폰트** → `src/app/globals.css`의 `@theme`. 클라우드 화이트(`#F7F8FA`) 배경에 1px 헤어라인과 여백으로만 층을 만듭니다. 강조색은 딥 틸 하나뿐이고, 의미가 있는 자리에만 씁니다. 폰트는 IBM Plex Sans KR 한 종류로 영문·한글을 모두 처리합니다.
 - **차트 색** → `Dashboard.tsx`의 `LINE`·`RAMP` 상수. `LINE`은 흰 카드 위 5.4:1 대비, `RAMP`는 밝기가 단조 감소하는 단일 색조 램프입니다. 바꾸면 두 성질을 유지하세요.
 - **표시 언어** → 학습 재료(질문·리라이트·표현·쉐도잉)는 영어, 설명(실수 이유·표현 뜻·레벨 코멘트)은 한국어입니다. 규칙은 `src/lib/prompts.ts`의 LANGUAGE 절에 있고, UI 문구는 각 컴포넌트에 직접 들어 있습니다.
-- **영어 변종** → `src/lib/english.ts`. 기본은 호주·뉴질랜드 공통 영어입니다.
+- **영어 변종** → `src/lib/english.ts`. 호주·뉴질랜드(기본) 또는 미국식. 아래 절 참고.
 
-## 영어 변종 (호주 / 뉴질랜드)
+## 영어 변종 (호주·뉴질랜드 / 미국)
 
-가르치는 영어는 미국식이 아니라 **호주·뉴질랜드식**입니다. `.env.local`에서 조절합니다.
+가르치는 영어의 종류를 고를 수 있습니다. `.env.local`에서 두 줄을 같은 값으로 맞추세요.
 
 ```
-ENGLISH_VARIANT=both              # both(기본) | nz | au
-NEXT_PUBLIC_ENGLISH_VARIANT=both  # 쉐도잉 음성 선택용, 위와 같은 값으로
+ENGLISH_VARIANT=anz              # anz(기본) | nz | au | us
+NEXT_PUBLIC_ENGLISH_VARIANT=anz  # 쉐도잉 음성 선택용
 ```
 
-- `both` — 두 나라 공통 표현만. 한쪽에서만 쓰는 속어(arvo, sweet as, jandals 등)는 피합니다.
-- `nz` — sweet as, chur, tramping, the dairy, jandals, bach 쪽으로 기웁니다.
-- `au` — arvo, brekkie, servo, thongs, esky, "no dramas" 쪽으로 기웁니다.
-
-적용 범위:
-
-| | 내용 |
+| 값 | 가르치는 영어 |
 |---|---|
-| 철자 | realise, colour, centre, travelled, maths, practise(동사)/practice(명사) 등 영연방식 |
-| 어휘 | lift(≠elevator), flat(≠apartment), holiday(≠vacation), uni, petrol, footpath, rubbish, queue, CV, mobile … |
-| 말투 | 과장 없이 담백하게. "awesome job", "you got this" 같은 미국식 응원과 느낌표 남발을 금지 |
-| 교정 | 학습자가 미국식 표현을 쓰면 그 자체를 실수로 잡아서 고쳐줍니다 |
-| 발음 | 쉐도잉 음성이 en-NZ → en-AU → en-GB 순으로 사용 가능한 목소리를 고릅니다 |
+| `anz` (기본) | 호주·뉴질랜드 공통. 한쪽에서만 쓰는 속어(arvo, sweet as, jandals 등)는 피합니다 |
+| `nz` | 뉴질랜드 쪽으로. sweet as, chur, tramping, the dairy, jandals, bach |
+| `au` | 호주 쪽으로. arvo, brekkie, servo, thongs, esky, "no dramas" |
+| `us` | 일반 미국 영어(General American). 지역색 강한 속어(y'all, hella, wicked)는 피합니다 |
 
-속어를 과하게 넣지 않도록 프롬프트에 제한을 걸어뒀습니다. 실사용 영어가 목적이지 흉내가 목적이 아니라서요.
+`both`는 `anz`의 옛 이름이라 그대로 써도 동작합니다.
+
+변종을 바꾸면 다섯 가지가 함께 바뀝니다.
+
+| | 호주·뉴질랜드 (`anz` / `nz` / `au`) | 미국 (`us`) |
+|---|---|---|
+| 철자 | realise, colour, centre, travelled, maths<br>practise(동사)/practice(명사) 구분 | realize, color, center, traveled, math<br>practice 하나로 통일 |
+| 어휘 | lift, flat, holiday, uni, petrol, footpath, rubbish, queue, CV, mobile | elevator, apartment, vacation, college, gas, sidewalk, trash, line, resume, cell phone |
+| 문법 | on the weekend, in hospital, different to, have got | on weekends, in the hospital, different from, gotten |
+| 말투 | 절제하고 담백하게. 미국식 응원("awesome job", "you got this")과 느낌표 남발 금지 | 따뜻하고 직접적으로. 느낌표도 자연스럽게. 다만 과장된 hype와 회사원 상투어("reach out", "circle back")는 금지 |
+| 교정 | 학습자가 미국식 표현을 쓰면 실수로 잡아서 고쳐줍니다 | 반대로 영연방식 표현을 쓰면 짚어줍니다 (틀린 게 아니라 "미국에선 이렇게 말해요" 톤으로) |
+| 발음 | en-NZ → en-AU → en-GB 순으로 목소리 선택 | en-US → en-CA 순 |
+
+어느 쪽이든 속어를 과하게 넣지 않도록 프롬프트에 제한을 걸어뒀습니다. 실사용 영어가 목적이지 흉내가 목적이 아니라서요.
 
 ## 참고
 
