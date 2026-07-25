@@ -1,4 +1,4 @@
-import { db, tx } from "./db";
+import { db, snapshot, tx } from "./db";
 import { newBadges, type Badge } from "./stats";
 import {
   EMPTY_PROFILE,
@@ -179,6 +179,14 @@ export function saveSession(input: SessionInput): {
     );
     for (const b of badges) award.run(b.id);
     after.badges = [...after.badges, ...badges.map((b) => b.id)];
+  }
+
+  // The practice is already safely committed, so a backup that fails — an
+  // unmounted drive, a full disk — must not turn into a failed session.
+  try {
+    snapshot();
+  } catch (err) {
+    console.error("[backup] snapshot failed, practice was still saved:", err);
   }
 
   return { profile: after, badges };

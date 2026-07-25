@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, renameSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 /**
@@ -93,4 +93,26 @@ export function tx<T>(fn: () => T): T {
     conn.exec("rollback");
     throw err;
   }
+}
+
+/**
+ * Copy the database to YAP_BACKUP, if it is set.
+ *
+ * `vacuum into` rather than a file copy: the live database has a WAL beside it,
+ * so copying the .db alone can capture a half-written state. This writes one
+ * consistent file, which is what makes it safe to point at iCloud or Dropbox.
+ *
+ * Writes to a temp path first and renames, so an interrupted backup can never
+ * leave a truncated file where the good one was.
+ */
+export function snapshot(): string | null {
+  const target = process.env.YAP_BACKUP;
+  if (!target) return null;
+
+  const tmp = `${target}.writing`;
+  mkdirSync(dirname(target), { recursive: true });
+  rmSync(tmp, { force: true }); // `vacuum into` refuses an existing file
+  db().exec(`vacuum into '${tmp.replaceAll("'", "''")}'`);
+  renameSync(tmp, target);
+  return target;
 }
