@@ -3,21 +3,20 @@
 import { useEffect, useRef, useState } from "react";
 import type { Feedback, Profile, Prompt, Turn } from "@/lib/types";
 import { topicKo, topicLabel } from "@/lib/topics";
-import {
-  applySession,
-  countWords,
-  getProfileSnapshot,
-  saveProfile,
-  type Badge,
-} from "@/lib/store";
+import { countWords, setProfile, today, type Badge } from "@/lib/store";
 import { FeedbackView } from "./FeedbackView";
 import { Button, Card, Meta, SectionLabel, Thinking } from "./ui";
 
 interface Props {
   topic: string;
-  profile: Profile;
   onBadges: (b: Badge[]) => void;
   onExit: () => void;
+}
+
+interface CoachResponse {
+  feedback: Feedback;
+  profile: Profile;
+  badges: Badge[];
 }
 
 /**
@@ -39,9 +38,8 @@ function askQuestion(topic: string): Promise<Prompt> {
   const request = fetch("/api/question", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    // Read the store directly: the profile prop changes as answers land, and
-    // depending on it in the effect would refetch the opening question.
-    body: JSON.stringify({ topic, profile: getProfileSnapshot() }),
+    // The route reads the learner's history from the database itself.
+    body: JSON.stringify({ topic }),
   }).then(async (r) => {
     const data = await r.json();
     if (!r.ok) throw new Error(data.error ?? "Couldn't get a question.");
@@ -54,7 +52,7 @@ function askQuestion(topic: string): Promise<Prompt> {
   return request;
 }
 
-export function Session({ topic, profile, onBadges, onExit }: Props) {
+export function Session({ topic, onBadges, onExit }: Props) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [draft, setDraft] = useState("");
@@ -101,12 +99,13 @@ export function Session({ topic, profile, onBadges, onExit }: Props) {
           question: prompt.question,
           answer,
           history: turns.map((t) => ({ question: t.question, answer: t.answer })),
-          profile,
+          // The server is on UTC; the streak counts the learner's calendar day.
+          practisedOn: today(),
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Couldn't get feedback.");
-      const feedback = data as Feedback;
+      const { feedback, profile: saved, badges } = data as CoachResponse;
 
       const turn: Turn = {
         id: crypto.randomUUID(),
@@ -122,12 +121,8 @@ export function Session({ topic, profile, onBadges, onExit }: Props) {
       setDraft("");
       setPrompt(feedback.followUp);
 
-      const { profile: next, badges } = applySession(getProfileSnapshot(), {
-        topic,
-        words,
-        feedback,
-      });
-      saveProfile(next);
+      // The route already wrote the session; this only mirrors the result.
+      setProfile(saved);
       if (badges.length) onBadges(badges);
     } catch (e) {
       setError((e as Error).message);

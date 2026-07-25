@@ -7,6 +7,7 @@ import { Logo } from "@/components/ui";
 import {
   getProfileServerSnapshot,
   getProfileSnapshot,
+  initProfile,
   resetProfile,
   subscribeProfile,
   type Badge,
@@ -20,6 +21,12 @@ export default function Page() {
   );
   const [topic, setTopic] = useState<string | null>(null);
   const [badges, setBadges] = useState<Badge[]>([]);
+
+  // Pulls the profile out of SQLite, migrating a leftover localStorage copy on
+  // the way. initProfile guards itself, so Strict Mode's second run is a no-op.
+  useEffect(() => {
+    void initProfile();
+  }, []);
 
   useEffect(() => {
     if (badges.length === 0) return;
@@ -47,7 +54,6 @@ export default function Page() {
         <Session
           key={topic}
           topic={topic}
-          profile={profile}
           onBadges={setBadges}
           onExit={() => setTopic(null)}
         />
@@ -57,7 +63,7 @@ export default function Page() {
           onStart={setTopic}
           onReset={() => {
             if (confirm("연속 학습일, 배운 표현, 기록을 모두 지울까요?")) {
-              resetProfile();
+              void resetProfile();
             }
           }}
         />

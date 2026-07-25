@@ -2,20 +2,23 @@ import { NextResponse } from "next/server";
 import { friendlyError, generateJSON } from "@/lib/llm";
 import { PROMPT_SCHEMA } from "@/lib/schemas";
 import { QUESTION_SYSTEM, profileBrief } from "@/lib/prompts";
+import { readProfile } from "@/lib/repo";
 import { topicLabel } from "@/lib/topics";
-import { EMPTY_PROFILE, type Profile, type Prompt } from "@/lib/types";
+import type { Prompt } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as { topic?: string; profile?: Profile };
+    const body = (await req.json()) as { topic?: string };
     const topic = body.topic;
     if (!topic) {
       return NextResponse.json({ error: "topic is required" }, { status: 400 });
     }
-    const profile = { ...EMPTY_PROFILE, ...(body.profile ?? {}) };
+
+    // The learner's history comes from the database, not the request body.
+    const profile = readProfile();
 
     const prompt = await generateJSON<Prompt>({
       system: QUESTION_SYSTEM,

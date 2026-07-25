@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { friendlyError, generateJSON } from "@/lib/llm";
 import { FEEDBACK_SCHEMA } from "@/lib/schemas";
 import { COACH_SYSTEM, profileBrief } from "@/lib/prompts";
+import { readProfile, saveSession } from "@/lib/repo";
+import { countWords, today } from "@/lib/stats";
 import { topicLabel } from "@/lib/topics";
-import { EMPTY_PROFILE, type Feedback, type Profile } from "@/lib/types";
+import type { Feedback } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -20,7 +22,7 @@ export async function POST(req: Request) {
       question?: string;
       answer?: string;
       history?: HistoryTurn[];
-      profile?: Profile;
+      practisedOn?: string;
     };
 
     const { topic, question, answer } = body;
@@ -31,7 +33,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const profile = { ...EMPTY_PROFILE, ...(body.profile ?? {}) };
+    const profile = readProfile();
     const history = (body.history ?? []).slice(-4);
 
     const transcript = history.length
@@ -69,7 +71,23 @@ export async function POST(req: Request) {
       maxTokens: 16000,
     });
 
-    return NextResponse.json(feedback);
+    // Persist before responding: if the browser is closed between receiving
+    // feedback and saving it, the practice is gone. Writing here closes that gap.
+    const saved = saveSession({
+      topic,
+      question,
+      answer: answer.trim(),
+      words: countWords(answer),
+      // The browser knows the learner's calendar date; the server may be on UTC.
+      practisedOn: body.practisedOn ?? today(),
+      feedback,
+    });
+
+    return NextResponse.json({
+      feedback,
+      profile: saved.profile,
+      badges: saved.badges,
+    });
   } catch (err) {
     console.error("[/api/coach]", err);
     const { message, status } = friendlyError(err);
