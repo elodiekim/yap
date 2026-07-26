@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { friendlyError, generateJSON } from "@/lib/llm";
 import { FEEDBACK_SCHEMA } from "@/lib/schemas";
 import { COACH_SYSTEM, profileBrief } from "@/lib/prompts";
-import { readProfile, saveSession } from "@/lib/repo";
+import { logUsage, readProfile, saveSession } from "@/lib/repo";
 import { countWords, today } from "@/lib/stats";
 import { topicLabel } from "@/lib/topics";
 import type { Feedback } from "@/lib/types";
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
           .join("\n\n")
       : "(this is the first turn of the session)";
 
-    const feedback = await generateJSON<Feedback>({
+    const { data: feedback, usage } = await generateJSON<Feedback>({
       system: COACH_SYSTEM,
       user: [
         `Topic: ${topicLabel(topic)}`,
@@ -71,6 +71,9 @@ export async function POST(req: Request) {
       maxTokens: 16000,
     });
 
+    const day = body.practisedOn ?? today();
+    logUsage(day, "coach", usage);
+
     // Persist before responding: if the browser is closed between receiving
     // feedback and saving it, the practice is gone. Writing here closes that gap.
     const saved = saveSession({
@@ -79,7 +82,7 @@ export async function POST(req: Request) {
       answer: answer.trim(),
       words: countWords(answer),
       // The browser knows the learner's calendar date; the server may be on UTC.
-      practisedOn: body.practisedOn ?? today(),
+      practisedOn: day,
       feedback,
     });
 

@@ -72,6 +72,24 @@ export interface SessionDetail extends SessionSummary {
   feedback: Feedback | null;
 }
 
+export interface UsageDay {
+  day: string;
+  requests: number;
+  inputTokens: number;
+  outputTokens: number;
+  /** null when a model in the mix has no price on file. */
+  cost: number | null;
+}
+
+export interface UsageReport {
+  today: UsageDay;
+  month: { requests: number; tokens: number; cost: number | null };
+  daily: UsageDay[];
+  models: string[];
+  /** Free-tier requests per day, for the "left today" hint. */
+  dailyRequestLimit: number | null;
+}
+
 /** Everything Yap remembers about the learner. */
 export interface Profile {
   level: Level;

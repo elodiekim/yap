@@ -39,7 +39,7 @@ function askQuestion(topic: string): Promise<Prompt> {
     method: "POST",
     headers: { "content-type": "application/json" },
     // The route reads the learner's history from the database itself.
-    body: JSON.stringify({ topic }),
+    body: JSON.stringify({ topic, practisedOn: today() }),
   }).then(async (r) => {
     const data = await r.json();
     if (!r.ok) throw new Error(data.error ?? "Couldn't get a question.");

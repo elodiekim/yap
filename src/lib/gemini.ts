@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import type { GenerateOptions } from "./llm";
+import type { GenerateOptions, Generated } from "./llm";
 
 /**
  * gemini-3.6-flash is the model the free tier covers. Pro models moved to
@@ -24,7 +24,7 @@ function gemini(): GoogleGenAI {
 
 export async function generateJSONWithGemini<T>(
   opts: GenerateOptions,
-): Promise<T> {
+): Promise<Generated<T>> {
   const interaction = await gemini().interactions.create({
     model: GEMINI_MODEL,
     system_instruction: opts.system,
@@ -44,8 +44,18 @@ export async function generateJSONWithGemini<T>(
   if (!text) {
     throw new Error("Gemini returned an empty response. Please try again.");
   }
+
+  // Comes back with the response itself, so recording it costs nothing.
+  const u = interaction.usage;
+  const usage = {
+    model: GEMINI_MODEL,
+    inputTokens: Number(u?.total_input_tokens ?? 0),
+    outputTokens: Number(u?.total_output_tokens ?? 0),
+    thoughtTokens: Number(u?.total_thought_tokens ?? 0),
+  };
+
   try {
-    return JSON.parse(text) as T;
+    return { data: JSON.parse(text) as T, usage };
   } catch {
     throw new Error("Gemini returned something unreadable. Please try again.");
   }

@@ -19,11 +19,30 @@ export interface GenerateOptions {
 
 export type Provider = "gemini" | "claude";
 
+/**
+ * What a call cost, as reported by the provider in the response we already
+ * paid for. Reading it is free — there is no extra request.
+ */
+export interface Usage {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  /** Reasoning tokens. Billed at the output rate on both providers. */
+  thoughtTokens: number;
+}
+
+export interface Generated<T> {
+  data: T;
+  usage: Usage;
+}
+
 export function provider(): Provider {
   return process.env.LLM_PROVIDER === "claude" ? "claude" : "gemini";
 }
 
-export async function generateJSON<T>(opts: GenerateOptions): Promise<T> {
+export async function generateJSON<T>(
+  opts: GenerateOptions,
+): Promise<Generated<T>> {
   if (provider() === "claude") {
     const { generateJSONWithClaude } = await import("./claude");
     return generateJSONWithClaude<T>(opts);

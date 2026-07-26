@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { friendlyError, generateJSON } from "@/lib/llm";
 import { PROMPT_SCHEMA } from "@/lib/schemas";
 import { QUESTION_SYSTEM, profileBrief } from "@/lib/prompts";
-import { readProfile } from "@/lib/repo";
+import { logUsage, readProfile } from "@/lib/repo";
+import { today } from "@/lib/stats";
 import { topicLabel } from "@/lib/topics";
 import type { Prompt } from "@/lib/types";
 
@@ -11,7 +12,7 @@ export const maxDuration = 120;
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as { topic?: string };
+    const body = (await req.json()) as { topic?: string; practisedOn?: string };
     const topic = body.topic;
     if (!topic) {
       return NextResponse.json({ error: "topic is required" }, { status: 400 });
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
     // The learner's history comes from the database, not the request body.
     const profile = readProfile();
 
-    const prompt = await generateJSON<Prompt>({
+    const { data: prompt, usage } = await generateJSON<Prompt>({
       system: QUESTION_SYSTEM,
       user: [
         `Topic: ${topicLabel(topic)}`,
@@ -35,6 +36,7 @@ export async function POST(req: Request) {
       maxTokens: 6000,
     });
 
+    logUsage(body.practisedOn ?? today(), "question", usage);
     return NextResponse.json(prompt);
   } catch (err) {
     console.error("[/api/question]", err);

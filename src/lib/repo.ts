@@ -1,4 +1,6 @@
 import { db, snapshot, tx } from "./db";
+import type { Usage } from "./llm";
+import { costOf } from "./pricing";
 import { newBadges, type Badge } from "./stats";
 import {
   EMPTY_PROFILE,
@@ -8,6 +10,7 @@ import {
   type Profile,
   type SessionDetail,
   type SessionSummary,
+  type UsageDay,
 } from "./types";
 
 /**
@@ -267,6 +270,88 @@ export function readSession(id: number): SessionDetail | null {
     answer: r.answer,
     feedback: r.feedback ? (JSON.parse(r.feedback) as Feedback) : null,
   };
+}
+
+/* ------------------------------------------------------------------ 사용량 */
+
+export function logUsage(
+  day: string,
+  kind: "question" | "coach",
+  usage: Usage,
+): void {
+  db()
+    .prepare(
+      `insert into usage_log (day, kind, model, input_tokens, output_tokens, thought_tokens)
+       values (?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      day,
+      kind,
+      usage.model,
+      usage.inputTokens,
+      usage.outputTokens,
+      usage.thoughtTokens,
+    );
+}
+
+function rollUp(
+  rows: {
+    day: string;
+    model: string;
+    requests: number;
+    input_tokens: number;
+    output_tokens: number;
+  }[],
+): UsageDay[] {
+  const byDay = new Map<string, UsageDay>();
+  for (const r of rows) {
+    const entry = byDay.get(r.day) ?? {
+      day: r.day,
+      requests: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      cost: 0 as number | null,
+    };
+    entry.requests += Number(r.requests);
+    entry.inputTokens += Number(r.input_tokens);
+    entry.outputTokens += Number(r.output_tokens);
+
+    const cost = costOf(r.model, Number(r.input_tokens), Number(r.output_tokens));
+    // One unpriced model makes the whole day's total a guess, so drop it
+    // rather than under-report.
+    entry.cost = cost === null || entry.cost === null ? null : entry.cost + cost;
+    byDay.set(r.day, entry);
+  }
+  return [...byDay.values()];
+}
+
+export function readUsage(days = 30): {
+  daily: UsageDay[];
+  models: string[];
+} {
+  const rows = db()
+    .prepare(
+      `select day, model, count(*) as requests,
+              sum(input_tokens) as input_tokens,
+              sum(output_tokens + thought_tokens) as output_tokens
+       from usage_log
+       group by day, model
+       order by day desc`,
+    )
+    .all() as unknown as {
+    day: string;
+    model: string;
+    requests: number;
+    input_tokens: number;
+    output_tokens: number;
+  }[];
+
+  const daily = rollUp(rows)
+    .sort((a, b) => (a.day < b.day ? 1 : -1))
+    .slice(0, days);
+
+  const models = [...new Set(rows.map((r) => r.model))];
+  return { daily, models };
 }
 
 export function isEmpty(): boolean {

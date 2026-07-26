@@ -58,6 +58,21 @@ create table if not exists badges (
   badge_id   text primary key,
   earned_at  text not null default (datetime('now'))
 );
+
+-- Every model call, including the ones that don't become a session. The
+-- numbers come back inside responses we already paid for, so logging them
+-- costs nothing extra.
+create table if not exists usage_log (
+  id             integer primary key autoincrement,
+  day            text not null,      -- learner's local date
+  kind           text not null,      -- 'question' | 'coach'
+  model          text not null,
+  input_tokens   integer not null default 0,
+  output_tokens  integer not null default 0,
+  thought_tokens integer not null default 0,
+  created_at     text not null default (datetime('now'))
+);
+create index if not exists usage_day on usage_log (day);
 `;
 
 function open(): DatabaseSync {

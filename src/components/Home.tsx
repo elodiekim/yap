@@ -4,6 +4,7 @@ import { TOPICS } from "@/lib/topics";
 import type { Profile } from "@/lib/types";
 import { streak } from "@/lib/store";
 import { Dashboard } from "./Dashboard";
+import { Usage } from "./Usage";
 import { Button, Card, Meta } from "./ui";
 
 export function Home({
@@ -106,6 +107,9 @@ export function Home({
             </button>
           </div>
           <Dashboard profile={profile} />
+          <div className="mt-3">
+            <Usage />
+          </div>
           <div className="mt-6 flex justify-end">
             <Button variant="quiet" onClick={onReset}>
               기록 전체 삭제

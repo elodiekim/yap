@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { GenerateOptions } from "./llm";
+import type { GenerateOptions, Generated } from "./llm";
 
 export const CLAUDE_MODEL = process.env.CLAUDE_MODEL ?? "claude-opus-5";
 
@@ -20,7 +20,7 @@ function claude(): Anthropic {
  */
 export async function generateJSONWithClaude<T>(
   opts: GenerateOptions,
-): Promise<T> {
+): Promise<Generated<T>> {
   const stream = claude().messages.stream({
     model: CLAUDE_MODEL,
     max_tokens: opts.maxTokens ?? 8000,
@@ -49,8 +49,17 @@ export async function generateJSONWithClaude<T>(
   if (!text || text.type !== "text") {
     throw new Error("No text content in model response.");
   }
+  // Anthropic bills thinking within output_tokens rather than breaking it out,
+  // so thoughtTokens stays 0 here and the cost maths still comes out right.
+  const usage = {
+    model: CLAUDE_MODEL,
+    inputTokens: message.usage.input_tokens,
+    outputTokens: message.usage.output_tokens,
+    thoughtTokens: 0,
+  };
+
   try {
-    return JSON.parse(text.text) as T;
+    return { data: JSON.parse(text.text) as T, usage };
   } catch {
     throw new Error("Yap returned something unreadable. Please try again.");
   }
