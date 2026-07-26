@@ -32,7 +32,9 @@ export function Usage() {
     };
   }, []);
 
-  if (!report || report.daily.length === 0) return null;
+  // Shown even at zero — "20 requests left today" is worth knowing before you
+  // start, and a card that hides itself is a card you can't find.
+  if (!report) return null;
 
   const { today: t, month, dailyRequestLimit: limit } = report;
   const left = limit === null ? null : Math.max(0, limit - t.requests);
@@ -43,7 +45,9 @@ export function Usage() {
     <Card className="p-5">
       <div className="flex items-baseline justify-between gap-2">
         <SectionLabel en="AI usage" ko="AI 사용량" />
-        <span className="text-[12px] text-faint">{report.models.join(", ")}</span>
+        <span className="text-[12px] text-faint">
+          {report.models.join(", ")}
+        </span>
       </div>
 
       {limit !== null ? (
@@ -91,7 +95,11 @@ export function Usage() {
         />
       </dl>
 
-      {t.cost === null || month.cost === null ? (
+      {report.daily.length === 0 ? (
+        <p className="ko mt-3 text-[12px] text-faint">
+          아직 기록이 없습니다. 다음 답변부터 여기에 쌓입니다.
+        </p>
+      ) : t.cost === null || month.cost === null ? (
         <p className="ko mt-3 text-[12px] text-faint">
           단가를 모르는 모델이 섞여 있어 비용은 계산하지 않았습니다.
         </p>
