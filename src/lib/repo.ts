@@ -6,6 +6,8 @@ import {
   type Feedback,
   type Level,
   type Profile,
+  type SessionDetail,
+  type SessionSummary,
 } from "./types";
 
 /**
@@ -190,6 +192,81 @@ export function saveSession(input: SessionInput): {
   }
 
   return { profile: after, badges };
+}
+
+export function listSessions(limit = 60, offset = 0): SessionSummary[] {
+  const rows = db()
+    .prepare(
+      `select id, practised_on, topic, word_count, mistake_count, level, source,
+              substr(coalesce(answer, ''), 1, 120) as preview
+       from sessions order by id desc limit ? offset ?`,
+    )
+    .all(limit, offset) as unknown as {
+    id: number;
+    practised_on: string;
+    topic: string | null;
+    word_count: number;
+    mistake_count: number;
+    level: Level | null;
+    source: string;
+    preview: string;
+  }[];
+
+  return rows.map((r) => ({
+    id: Number(r.id),
+    practisedOn: r.practised_on,
+    topic: r.topic,
+    wordCount: Number(r.word_count),
+    mistakeCount: Number(r.mistake_count),
+    level: r.level,
+    preview: r.preview,
+    imported: r.source === "import",
+  }));
+}
+
+export function countSessions(): number {
+  const row = db().prepare("select count(*) as n from sessions").get() as {
+    n: number;
+  };
+  return Number(row.n);
+}
+
+export function readSession(id: number): SessionDetail | null {
+  const r = db()
+    .prepare(
+      `select id, practised_on, topic, word_count, mistake_count, level, source,
+              question, answer, feedback
+       from sessions where id = ?`,
+    )
+    .get(id) as unknown as
+    | {
+        id: number;
+        practised_on: string;
+        topic: string | null;
+        word_count: number;
+        mistake_count: number;
+        level: Level | null;
+        source: string;
+        question: string | null;
+        answer: string | null;
+        feedback: string | null;
+      }
+    | undefined;
+
+  if (!r) return null;
+  return {
+    id: Number(r.id),
+    practisedOn: r.practised_on,
+    topic: r.topic,
+    wordCount: Number(r.word_count),
+    mistakeCount: Number(r.mistake_count),
+    level: r.level,
+    preview: (r.answer ?? "").slice(0, 120),
+    imported: r.source === "import",
+    question: r.question,
+    answer: r.answer,
+    feedback: r.feedback ? (JSON.parse(r.feedback) as Feedback) : null,
+  };
 }
 
 export function isEmpty(): boolean {

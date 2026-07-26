@@ -9,10 +9,12 @@ import { Button, Card, Meta } from "./ui";
 export function Home({
   profile,
   onStart,
+  onHistory,
   onReset,
 }: {
   profile: Profile;
   onStart: (topic: string) => void;
+  onHistory: () => void;
   onReset: () => void;
 }) {
   const s = streak(profile.days);
@@ -91,10 +93,18 @@ export function Home({
 
       {!fresh ? (
         <section className="mt-16 animate-rise [animation-delay:120ms]">
-          <h2 className="mb-4 text-[15px] font-semibold">
-            Your progress
-            <span className="ko ml-2 font-normal text-muted">기록</span>
-          </h2>
+          <div className="mb-4 flex items-baseline justify-between gap-3">
+            <h2 className="text-[15px] font-semibold">
+              Your progress
+              <span className="ko ml-2 font-normal text-muted">기록</span>
+            </h2>
+            <button
+              onClick={onHistory}
+              className="ko rounded-md text-[13px] text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              지난 연습 다시 보기 →
+            </button>
+          </div>
           <Dashboard profile={profile} />
           <div className="mt-6 flex justify-end">
             <Button variant="quiet" onClick={onReset}>

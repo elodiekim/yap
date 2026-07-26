@@ -48,7 +48,31 @@ export interface Turn {
   createdAt: string;
 }
 
-/** Everything Yap remembers about the learner, persisted in localStorage. */
+/**
+ * One past session, as the history screen sees it.
+ *
+ * Lives here rather than in repo.ts so client components can name these
+ * without importing a module that pulls in node:sqlite.
+ */
+export interface SessionSummary {
+  id: number;
+  practisedOn: string;
+  topic: string | null;
+  wordCount: number;
+  mistakeCount: number;
+  level: Level | null;
+  /** Empty for imported rows, which never had the answer text. */
+  preview: string;
+  imported: boolean;
+}
+
+export interface SessionDetail extends SessionSummary {
+  question: string | null;
+  answer: string | null;
+  feedback: Feedback | null;
+}
+
+/** Everything Yap remembers about the learner. */
 export interface Profile {
   level: Level;
   /** Expressions already taught — never teach the same one twice. */
