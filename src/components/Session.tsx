@@ -59,11 +59,12 @@ export function Session({ topic, onBadges, onExit }: Props) {
   const [loadingPrompt, setLoadingPrompt] = useState(true);
   const [grading, setGrading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const liveRef = useRef<HTMLDivElement>(null);
 
   // Session is remounted (key={topic}) whenever the topic changes, so this
   // effect runs exactly once — the loading state is set in useState above
-  // rather than synchronously here.
+  // rather than synchronously here. `attempt` re-runs it after a failure.
   useEffect(() => {
     let cancelled = false;
     askQuestion(topic)
@@ -79,7 +80,19 @@ export function Session({ topic, onBadges, onExit }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [topic]);
+  }, [topic, attempt]);
+
+  /**
+   * The opening question is the one call with no way back: a 429 here left the
+   * screen showing an error and nothing else, so the only way on was to leave
+   * the topic and come back. Rate limits are routine on the free tier, so this
+   * needs a button.
+   */
+  function retryQuestion() {
+    setError(null);
+    setLoadingPrompt(true);
+    setAttempt((n) => n + 1);
+  }
 
   const words = countWords(draft);
   const canSubmit = words >= 8 && !grading && !!prompt;
@@ -137,8 +150,6 @@ export function Session({ topic, onBadges, onExit }: Props) {
     }
   }, [turns.length]);
 
-
-
   return (
     <div className="mx-auto w-full max-w-3xl px-5 pb-32 pt-8 sm:px-6">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-3 border-b border-hair pb-4">
@@ -189,7 +200,19 @@ export function Session({ topic, onBadges, onExit }: Props) {
 
       {error ? (
         <Card tone="bg-flag-soft" className="mt-4 border-flag/25 p-4">
-          <p className="ko text-[14px] text-flag">{error}</p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="ko text-[14px] text-flag">{error}</p>
+            {prompt ? null : (
+              <Button variant="ghost" onClick={retryQuestion}>
+                다시 시도
+              </Button>
+            )}
+          </div>
+          {prompt ? (
+            <p className="ko mt-1.5 text-[13px] text-muted">
+              쓰신 답변은 그대로 있으니 잠시 뒤 다시 제출해보세요.
+            </p>
+          ) : null}
         </Card>
       ) : null}
     </div>

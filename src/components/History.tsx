@@ -33,6 +33,7 @@ function SessionList({
 }) {
   const [sessions, setSessions] = useState<SessionSummary[] | null>(null);
   const [total, setTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -51,6 +52,26 @@ function SessionList({
       cancelled = true;
     };
   }, []);
+
+  // The route pages at 30. Without this the list just stopped there while the
+  // count above it said otherwise, and older sessions were unreachable.
+  async function loadMore() {
+    if (!sessions) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetch(`/api/sessions?offset=${sessions.length}`);
+      const d = (await res.json()) as {
+        sessions: SessionSummary[];
+        total: number;
+      };
+      setSessions([...sessions, ...d.sessions]);
+      setTotal(d.total);
+    } catch {
+      setError("더 불러오지 못했어요.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   // Sessions arrive newest-first; group them under their day.
   const byDay = new Map<string, SessionSummary[]>();
@@ -93,7 +114,9 @@ function SessionList({
 
       {sessions && sessions.length > 0 ? (
         <>
-          <p className="ko mt-2 text-[13px] text-muted">전체 {total}회</p>
+          <p className="ko mt-2 text-[13px] text-muted">
+            전체 {total}회 중 {sessions.length}회 보는 중
+          </p>
           <div className="mt-6 space-y-8">
             {[...byDay.entries()].map(([day, list], di) => (
               <section
@@ -114,6 +137,20 @@ function SessionList({
               </section>
             ))}
           </div>
+
+          {sessions.length < total ? (
+            <div className="mt-8 flex justify-center">
+              <Button
+                variant="ghost"
+                onClick={loadMore}
+                disabled={loadingMore}
+              >
+                {loadingMore
+                  ? "불러오는 중…"
+                  : `더 보기 (${total - sessions.length}회 남음)`}
+              </Button>
+            </div>
+          ) : null}
         </>
       ) : null}
     </div>

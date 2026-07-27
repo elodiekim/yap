@@ -85,7 +85,14 @@ export default function Page() {
           onStart={setTopic}
           onHistory={() => setHistory(true)}
           onReset={() => {
-            if (confirm("연속 학습일, 배운 표현, 기록을 모두 지울까요?")) {
+            if (
+              confirm(
+                "연습 기록을 모두 지울까요?\n\n" +
+                  "지워지는 것 — 지난 연습, 연속 학습일, 배운 표현, 실수 기록, 트로피\n" +
+                  "남는 것 — AI 사용량과 비용 (실제로 쓴 금액이라 지우면 오히려 안 맞습니다)\n\n" +
+                  "되돌릴 수 없습니다.",
+              )
+            ) {
               void resetProfile();
             }
           }}

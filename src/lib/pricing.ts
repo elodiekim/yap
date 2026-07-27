@@ -18,10 +18,6 @@ const PRICES: Record<string, { input: number; output: number }> = {
   "claude-haiku-4-5": { input: 1.0, output: 5.0 },
 };
 
-export function knownModel(model: string): boolean {
-  return model in PRICES;
-}
-
 /** USD for one call. Returns null when the model has no price on file. */
 export function costOf(
   model: string,

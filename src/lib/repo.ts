@@ -414,6 +414,13 @@ export function importLegacy(legacy: Profile): { sessions: number } {
   });
 }
 
+/**
+ * Wipe the practice record.
+ *
+ * `usage_log` deliberately survives. Those tokens were actually spent, and
+ * deleting the row does not un-spend them — it would just make the monthly
+ * cost read lower than the real bill. The confirm text says so.
+ */
 export function resetAll(): void {
   tx(() => {
     const conn = db();
