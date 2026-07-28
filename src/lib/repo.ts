@@ -5,6 +5,7 @@ import { newBadges, type Badge } from "./stats";
 import {
   EMPTY_PROFILE,
   type Expression,
+  type ExpressionEntry,
   type Feedback,
   type Level,
   type Profile,
@@ -270,6 +271,42 @@ export function readSession(id: number): SessionDetail | null {
     answer: r.answer,
     feedback: r.feedback ? (JSON.parse(r.feedback) as Feedback) : null,
   };
+}
+
+/** Every expression ever taught, newest first. */
+export function listExpressions(): ExpressionEntry[] {
+  const rows = db()
+    .prepare(
+      // Only offer the session link when there is something to open. Imported
+      // rows hold no question or answer, so linking to one is a dead end — and
+      // some existing expressions do point at them.
+      `select e.id, e.phrase, e.meaning, e.example,
+              case when s.source = 'live' then s.id end as session_id,
+              case when s.source = 'live' then s.topic end as topic,
+              s.practised_on
+       from expressions e
+       left join sessions s on s.id = e.session_id
+       order by e.id desc`,
+    )
+    .all() as unknown as {
+    id: number;
+    phrase: string;
+    meaning: string;
+    example: string;
+    session_id: number | null;
+    topic: string | null;
+    practised_on: string | null;
+  }[];
+
+  return rows.map((r) => ({
+    id: Number(r.id),
+    phrase: r.phrase,
+    meaning: r.meaning,
+    example: r.example,
+    sessionId: r.session_id === null ? null : Number(r.session_id),
+    topic: r.topic,
+    learnedOn: r.practised_on,
+  }));
 }
 
 /* ------------------------------------------------------------------ 사용량 */

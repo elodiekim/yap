@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { Expressions } from "@/components/Expressions";
 import { History } from "@/components/History";
 import { Home } from "@/components/Home";
 import { Session } from "@/components/Session";
@@ -14,6 +15,27 @@ import {
   type Badge,
 } from "@/lib/store";
 
+function NavLink({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`ko rounded-md px-1 text-[13px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent ${
+        active ? "text-accent" : "text-muted hover:text-ink"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function Page() {
   const profile = useSyncExternalStore(
     subscribeProfile,
@@ -21,12 +43,20 @@ export default function Page() {
     getProfileServerSnapshot,
   );
   const [topic, setTopic] = useState<string | null>(null);
-  const [history, setHistory] = useState(false);
+  const [view, setView] = useState<"home" | "history" | "expressions">("home");
+  const [openSession, setOpenSession] = useState<number | null>(null);
   const [badges, setBadges] = useState<Badge[]>([]);
 
   function goHome() {
     setTopic(null);
-    setHistory(false);
+    setView("home");
+    setOpenSession(null);
+  }
+
+  function go(next: "history" | "expressions") {
+    setTopic(null);
+    setOpenSession(null);
+    setView(next);
   }
 
   // Pulls the profile out of SQLite, migrating a leftover localStorage copy on
@@ -55,17 +85,18 @@ export default function Page() {
             <p className="ko hidden text-[13px] text-faint sm:block">
               어제보다 한 문장 더
             </p>
-            <button
-              onClick={() => {
-                setTopic(null);
-                setHistory(true);
-              }}
-              className={`ko rounded-md px-1 text-[13px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent ${
-                history ? "text-accent" : "text-muted hover:text-ink"
-              }`}
+            <NavLink
+              active={view === "history" && !topic}
+              onClick={() => go("history")}
             >
               지난 연습
-            </button>
+            </NavLink>
+            <NavLink
+              active={view === "expressions" && !topic}
+              onClick={() => go("expressions")}
+            >
+              표현
+            </NavLink>
           </div>
         </div>
       </nav>
@@ -77,13 +108,22 @@ export default function Page() {
           onBadges={setBadges}
           onExit={goHome}
         />
-      ) : history ? (
-        <History onExit={goHome} />
+      ) : view === "history" ? (
+        <History onExit={goHome} initialSession={openSession} />
+      ) : view === "expressions" ? (
+        <Expressions
+          onExit={goHome}
+          onOpenSession={(id) => {
+            setOpenSession(id);
+            setView("history");
+          }}
+        />
       ) : (
         <Home
           profile={profile}
           onStart={setTopic}
-          onHistory={() => setHistory(true)}
+          onHistory={() => go("history")}
+          onExpressions={() => go("expressions")}
           onReset={() => {
             if (
               confirm(

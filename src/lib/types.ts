@@ -72,6 +72,15 @@ export interface SessionDetail extends SessionSummary {
   feedback: Feedback | null;
 }
 
+/** One learned expression, with where it came from. */
+export interface ExpressionEntry extends Expression {
+  id: number;
+  /** null for expressions carried over from localStorage. */
+  sessionId: number | null;
+  topic: string | null;
+  learnedOn: string | null;
+}
+
 export interface UsageDay {
   day: string;
   requests: number;

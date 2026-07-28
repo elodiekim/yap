@@ -2,11 +2,8 @@
 
 import { useState } from "react";
 import type { Feedback } from "@/lib/types";
-import {
-  PUBLIC_ENGLISH_VARIANT,
-  variantKo,
-  voicePreference,
-} from "@/lib/english";
+import { PUBLIC_ENGLISH_VARIANT, variantKo } from "@/lib/english";
+import { speak } from "@/lib/speech";
 import { Card, SectionLabel } from "./ui";
 
 export function FeedbackView({ feedback }: { feedback: Feedback }) {
@@ -120,39 +117,14 @@ function Expressions({ feedback }: { feedback: Feedback }) {
   );
 }
 
-const VOICE_ORDER = voicePreference(PUBLIC_ENGLISH_VARIANT);
 const VARIANT_KO = variantKo(PUBLIC_ENGLISH_VARIANT);
-
-/**
- * Voices load asynchronously, so read the list at click time rather than on
- * mount. Falls through the variant's preferred accents to any English; if the
- * device has none of them, `lang` alone still nudges the default voice.
- */
-function pickVoice(): SpeechSynthesisVoice | null {
-  const voices = window.speechSynthesis.getVoices();
-  if (voices.length === 0) return null;
-  for (const tag of VOICE_ORDER) {
-    const hit = voices.find((v) => v.lang.replace("_", "-").startsWith(tag));
-    if (hit) return hit;
-  }
-  return null;
-}
 
 function Shadowing({ lines }: { lines: string[] }) {
   const [speaking, setSpeaking] = useState<number | null>(null);
 
-  function speak(text: string, i: number) {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    const voice = pickVoice();
-    if (voice) u.voice = voice;
-    u.lang = voice?.lang ?? VOICE_ORDER[0];
-    u.rate = 0.92;
-    u.onend = () => setSpeaking(null);
-    u.onerror = () => setSpeaking(null);
+  function play(text: string, i: number) {
     setSpeaking(i);
-    window.speechSynthesis.speak(u);
+    if (!speak(text, () => setSpeaking(null))) setSpeaking(null);
   }
 
   return (
@@ -162,7 +134,7 @@ function Shadowing({ lines }: { lines: string[] }) {
         {lines.map((line, i) => (
           <li key={i}>
             <button
-              onClick={() => speak(line, i)}
+              onClick={() => play(line, i)}
               className="group flex w-full items-baseline gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-sunk focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent"
             >
               <span

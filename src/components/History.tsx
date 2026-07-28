@@ -13,8 +13,15 @@ function pretty(iso: string): string {
   return `${d.getMonth() + 1}월 ${d.getDate()}일 (${day})`;
 }
 
-export function History({ onExit }: { onExit: () => void }) {
-  const [open, setOpen] = useState<number | null>(null);
+export function History({
+  onExit,
+  initialSession = null,
+}: {
+  onExit: () => void;
+  /** Set when arriving from an expression, to open that session directly. */
+  initialSession?: number | null;
+}) {
+  const [open, setOpen] = useState<number | null>(initialSession);
   return open === null ? (
     <SessionList onOpen={setOpen} onExit={onExit} />
   ) : (

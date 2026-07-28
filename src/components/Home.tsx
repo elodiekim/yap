@@ -11,11 +11,13 @@ export function Home({
   profile,
   onStart,
   onHistory,
+  onExpressions,
   onReset,
 }: {
   profile: Profile;
   onStart: (topic: string) => void;
   onHistory: () => void;
+  onExpressions: () => void;
   onReset: () => void;
 }) {
   const s = streak(profile.days);
@@ -99,12 +101,20 @@ export function Home({
               Your progress
               <span className="ko ml-2 font-normal text-muted">기록</span>
             </h2>
-            <button
-              onClick={onHistory}
-              className="ko rounded-md text-[13px] text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            >
-              지난 연습 다시 보기 →
-            </button>
+            <div className="flex shrink-0 items-baseline gap-4">
+              <button
+                onClick={onExpressions}
+                className="ko rounded-md text-[13px] text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              >
+                배운 표현 {profile.vocab.length}개 →
+              </button>
+              <button
+                onClick={onHistory}
+                className="ko rounded-md text-[13px] text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              >
+                지난 연습 →
+              </button>
+            </div>
           </div>
           <Dashboard profile={profile} />
           <div className="mt-3">
