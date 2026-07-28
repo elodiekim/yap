@@ -25,4 +25,5 @@ These look like style choices and are not. Each one is load-bearing.
 
 - **Design: this user has rejected two AI-looking redesigns.** The fix was never colour — it was the visual vocabulary (glassmorphism, glowing accents, chunky offset shadows, emoji chrome, novelty fonts all read as "AI template"). Current look is cloud white with hairlines, restrained type and quiet animation. Keep it plain.
 - **The API key is the user's and metered.** Gemini's free tier ran out at 20 requests/day in real use. Don't spend calls casually; say so when you do.
+- **Commit messages: one line, no body.** English, imperative, sentence case, no `feat:` prefix, no trailing full stop. Say what changed for the learner, not which files moved — "Show the usage card before there is any usage", not "Update Home.tsx". The long explanatory bodies in the history are the user's own; do not imitate them.
 - **Verify against the installed SDKs, not memory.** `@google/genai` and Next 16 both have surfaces that postdate training data. Read the `.d.ts` files.
