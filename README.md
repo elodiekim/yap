@@ -1,10 +1,17 @@
 # Yap
 
-> every day, one more sentence than yesterday
+> every day, one more sentence than yesterday — 어제보다 한 문장 더
 
-영어 말하기를 매일 조금씩 늘리는 웹앱. AI가 친근한 원어민 튜터처럼 질문하고, 답변을 자연스럽게 고쳐주고, 절대 대화를 끝내지 않습니다.
+영어 말하기를 매일 조금씩 늘리는 웹앱. AI가 친근한 원어민 튜터처럼 질문하고, 답변을 자연스럽게
+고쳐주고, **절대 대화를 끝내지 않습니다.**
 
-기획 의도, 데이터 모델, 로드맵은 [기획서](docs/product-spec.md)에 있습니다.
+- 기획 의도 · 데이터 모델 · 로드맵 → [기획서](docs/product-spec.md)
+- 앞으로 손볼 것 → [todo.md](todo.md)
+
+**목차** · [시작하기](#시작하기) · [쓰는 흐름](#쓰는-흐름) · [기억하는 것](#기억하는-것) ·
+[대시보드](#대시보드와-사용량) · [설정](#설정) · [커스터마이즈](#커스터마이즈) · [구조](#구조)
+
+---
 
 ## 시작하기
 
@@ -14,47 +21,60 @@ cp .env.local.example .env.local   # GEMINI_API_KEY=... 를 채워넣기
 npm run dev
 ```
 
-<http://localhost:3000> 접속.
+<http://localhost:3000> 접속. 끝입니다 — 계정도, 서버도, DB 설치도 없습니다.
 
-키는 <https://aistudio.google.com/apikey> 에서 발급합니다. 서버 라우트에서만 쓰이고 브라우저로 나가지 않습니다.
+키는 <https://aistudio.google.com/apikey> 에서 발급합니다. 서버 라우트에서만 쓰이고 브라우저로
+나가지 않습니다.
 
-## 모델 프로바이더 고르기
+## 쓰는 흐름
 
-`.env.local`의 `LLM_PROVIDER`로 전환합니다.
+**1. 토픽을 하나 고릅니다**
+자기소개 · 직업 · 취미 · 힘들었던 일 · 고향 · 여행 · 목표 · 연애 · 하루 일과
 
-| | Gemini (기본값) | Claude |
+**2. Yap이 질문 하나 + 💡 Need ideas? 힌트 4~5개를 줍니다**
+힌트는 부가 기능이 아니라 이 앱의 핵심입니다 — "생각이 안 나요"에서 막히지 않게 하려고 있습니다.
+
+**3. 3~10문장을 씁니다** (`⌘↵` 로 제출)
+
+**4. 피드백이 정해진 순서로 옵니다**
+
+| | | |
 |---|---|---|
-| 설정 | `LLM_PROVIDER=gemini`<br>`GEMINI_API_KEY=...` | `LLM_PROVIDER=claude`<br>`ANTHROPIC_API_KEY=...` |
-| 모델 | `gemini-3.6-flash` | `claude-opus-5` |
-| 비용 | 무료 티어 있음 (분당·일일 요청 제한) | 무료 티어 없음, 종량제 |
+| 1 | **칭찬 먼저** | 문법 지적으로 절대 시작하지 않음 |
+| 2 | **자연스러운 리라이트** | 문법만 고친 게 아니라 원어민이 실제로 말하는 방식으로 |
+| 3 | **중요한 실수 3~5개만** | 원문 / 개선문 / 짧은 이유 / 다른 예문 |
+| 4 | **유용한 표현 3개** | 리라이트에서 뽑아옴 |
+| 5 | **쉐도잉 문장 2~3개** | 탭하면 소리로 읽어줌 (Web Speech API) |
+| 6 | **다음 질문** | 힌트까지 같이. 대화는 끝나지 않음 |
 
-무료 티어의 정확한 한도는 계정·지역마다 달라서 [AI Studio 대시보드](https://aistudio.google.com/rate-limit)에서 확인해야 합니다. Pro 모델은 유료 전용이라 `GEMINI_MODEL`을 Pro로 바꾸면 과금됩니다.
+**5. 계속 답하면 대화가 이어집니다.**
 
-프로바이더 코드는 `src/lib/llm.ts`가 분기하고, 실제 호출은 `gemini.ts` / `claude.ts`에 각각 들어 있습니다. 프롬프트·스키마·UI는 양쪽이 공유합니다.
-
-## 동작 방식
-
-1. 토픽을 하나 고른다 (자기소개, 직업, 취미, 힘들었던 일, 고향, 여행, 목표, 연애, 하루 일과)
-2. Yap이 열린 질문 하나 + **💡 Need ideas?** 힌트 4~5개를 준다 — "생각이 안 나요" 문제를 막기 위한 핵심 기능
-3. 3~10문장을 쓴다 (⌘↵ 로 제출)
-4. 피드백이 정해진 순서로 온다:
-   - **칭찬 먼저** — 문법 지적으로 절대 시작하지 않음
-   - **자연스러운 리라이트** — 문법만 고친 게 아니라 원어민이 실제로 말하는 방식으로
-   - **중요한 실수 3~5개만** — 원문 / 개선문 / 짧은 이유 / 다른 예문
-   - **유용한 표현 3개** — 리라이트에서 뽑아옴
-   - **쉐도잉 문장 2~3개** — 탭하면 소리로 읽어줌 (Web Speech API)
-   - **다음 질문** — 힌트까지 같이. 대화는 끝나지 않음
-5. 계속 답하면 대화가 이어짐
+상단 네비게이션에 **지난 연습**과 **표현** 두 화면이 더 있습니다.
 
 ## 기억하는 것
 
-`data/yap.db` (로컬 SQLite 파일 하나, gitignore 대상). 계정도 서버도 없습니다 — Node 내장 `node:sqlite`를 써서 추가 의존성도 없습니다.
+모든 기록은 `data/yap.db` — **로컬 SQLite 파일 하나**(gitignore 대상)에 들어갑니다.
+Node 내장 `node:sqlite`를 쓰기 때문에 추가 의존성도, 계정도, 서버도 없습니다.
+
+매 요청마다 서버가 DB에서 프로필을 읽어 프롬프트에 넣습니다. 그래서 Yap이:
+
+- 이미 가르친 표현을 다시 가르치지 않고
+- 반복되는 실수 패턴을 추적하고
+- 이미 다룬 토픽을 기억하고
+- 추정 CEFR 레벨(A2~C1)에 맞춰 다음 질문 난이도를 조절합니다
 
 ### 지난 연습 다시 보기
 
-앱 상단의 **지난 연습**을 누르면 날짜별 목록이 나오고, 세션을 고르면 그때 받은 질문 / 내가 쓴 답변 / 피드백 전문이 그대로 다시 보입니다.
+**지난 연습**을 누르면 날짜별 목록이 나오고, 세션을 고르면 그때 받은 질문 / 내가 쓴 답변 /
+피드백 전문이 그대로 다시 보입니다.
 
-`localStorage`에서 이전해온 기록은 점선 카드로 표시되고 열리지 않습니다 — 옛 구조가 질문·답변을 저장하지 않아서 통계만 남아 있기 때문입니다.
+`localStorage`에서 이전해온 기록은 점선 카드로 표시되고 열리지 않습니다 — 옛 구조가 질문·답변을
+저장하지 않아서 통계만 남아 있기 때문입니다.
+
+### 배운 표현
+
+**표현**을 누르면 지금까지 배운 표현이 한 곳에 모입니다. 뜻과 예문, 그리고 그 표현이 나온
+세션으로 돌아가는 링크가 함께 있습니다.
 
 ### 터미널에서 들여다보기
 
@@ -71,11 +91,13 @@ sqlite> .tables
 sqlite> select practised_on, topic, word_count from sessions order by id desc limit 5;
 ```
 
-테이블은 `sessions` / `expressions` / `mistakes` / `badges` / `profile` 다섯 개입니다. 구조는 [기획서 8절](docs/product-spec.md)에 있습니다.
+테이블은 `sessions` / `expressions` / `mistakes` / `badges` / `profile` / `usage_log`.
+구조와 설계 이유는 [기획서 8절](docs/product-spec.md#8-데이터-모델)에 있습니다.
 
 ### 백업
 
-`.env.local`에 백업 경로를 넣으면 **세션이 저장될 때마다 자동으로 스냅샷을 뜹니다.** 따로 하실 게 없습니다.
+`.env.local`에 경로를 넣으면 **세션이 저장될 때마다 자동으로 스냅샷을 뜹니다.** 따로 하실 게
+없습니다.
 
 ```
 YAP_BACKUP=/Users/사용자명/Library/Mobile Documents/com~apple~CloudDocs/yap-backup.db
@@ -83,61 +105,67 @@ YAP_BACKUP=/Users/사용자명/Library/Mobile Documents/com~apple~CloudDocs/yap-
 
 지금 바로 한 번 뜨고 싶으면 `npm run backup`.
 
-DB 파일을 iCloud 폴더에 **직접 두지는 마세요.** 옆에 WAL 파일이 같이 돌아가서 동기화 중에 깨질 수 있습니다. 위 방식은 SQLite의 `VACUUM INTO`로 일관된 사본 하나를 만들기 때문에 안전하고, 임시 파일에 쓴 뒤 이름을 바꾸므로 백업이 중간에 끊겨도 기존 백업이 망가지지 않습니다. 백업이 실패해도 연습 기록 저장은 그대로 됩니다.
+> [!WARNING]
+> DB 파일 자체를 iCloud 폴더에 **직접 두지는 마세요.** 옆에서 WAL 파일이 같이 돌아가기 때문에
+> 동기화 중에 깨질 수 있습니다.
 
-경로를 비워두면 백업을 하지 않습니다. 그 경우 `data/yap.db`가 유일한 사본이라 노트북이 죽으면 기록도 사라집니다.
+위 방식은 SQLite의 `VACUUM INTO`로 일관된 사본 하나를 만들기 때문에 안전하고, 임시 파일에 쓴 뒤
+이름을 바꾸므로 백업이 중간에 끊겨도 기존 백업이 망가지지 않습니다. 백업이 실패해도 연습 기록
+저장은 그대로 됩니다.
 
-예전에 `localStorage`로 쓰던 기록이 있으면 첫 실행 때 자동으로 옮겨옵니다 (원본은 `yap.profile.v1.migrated` 키에 그대로 남겨둡니다). 다만 옛 구조가 질문·답변 원문을 저장하지 않아서, 통계와 그래프는 살아나지만 지난 대화를 다시 읽는 건 이전 이후 기록부터 가능합니다.
+경로를 비워두면 백업을 하지 않습니다. 그 경우 `data/yap.db`가 유일한 사본이라 노트북이 죽으면
+기록도 사라집니다.
 
-매 요청마다 서버가 DB에서 프로필을 읽어 프롬프트에 넣기 때문에 Yap이:
+### 예전 기록 이전
 
-- 이미 가르친 표현을 다시 가르치지 않음
-- 반복되는 실수 패턴을 추적함
-- 이미 다룬 토픽을 기억함
-- 추정 CEFR 레벨(A2~C1)에 맞춰 다음 질문 난이도를 조절함
+`localStorage`로 쓰던 기록이 있으면 첫 실행 때 자동으로 옮겨옵니다 (원본은
+`yap.profile.v1.migrated` 키에 그대로 남겨둡니다). 다만 옛 구조가 질문·답변 원문을 저장하지
+않아서, 통계와 그래프는 살아나지만 지난 대화를 다시 읽는 건 이전 이후 기록부터 가능합니다.
 
-## 대시보드
+## 대시보드와 사용량
 
-연속 학습일(streak), 총 대화 수, 누적 단어 수, 배운 표현 수, CEFR 진행도, 그리고 **답변당 주요 실수 추이** 그래프. 트로피는 7일 연속, 하루 200단어, 표현 30개 등에서 열립니다.
+홈 화면 아래쪽에 연속 학습일(streak), 총 대화 수, 누적 단어 수, 배운 표현 수, CEFR 진행도,
+그리고 **답변당 주요 실수 추이** 그래프가 있습니다. 트로피는 7일 연속, 하루 200단어, 표현 30개
+같은 지점에서 열립니다.
 
-## 구조
+그 옆 사용량 카드에는 오늘 요청 수(무료 한도 대비), 오늘·이번 달 토큰과 예상 비용이 나옵니다.
+**이 숫자를 보려고 추가로 호출하는 API는 없습니다** — 이미 응답에 들어 있던 값을 기록만 한
+것입니다. 단가는 `src/lib/pricing.ts`에 하드코딩돼 있어서, 모르는 모델이 섞이면 비용을 추측하지
+않고 `—`로 비웁니다.
 
-```
-src/
-  app/
-    page.tsx              앱 셸 (홈 ↔ 세션 전환, 뱃지 토스트)
-    api/question/route.ts 토픽 → 질문 + 힌트
-    api/coach/route.ts    답변 → 6단계 피드백
-  components/
-    Home.tsx              히어로 + 토픽 그리드 + 대시보드
-    Session.tsx           질문 / 작성 / 피드백 루프
-    FeedbackView.tsx      피드백 6단계 카드
-    Dashboard.tsx         스탯, CEFR 미터, 실수 추이 차트, 트로피
-    ui.tsx                Card / Button / Pill 등 공용 요소
-  lib/
-    llm.ts                프로바이더 분기 + 에러 메시지
-    gemini.ts             Gemini 호출 (structured output)
-    claude.ts             Claude 호출 (structured output)
-    prompts.ts            튜터 페르소나와 피드백 규칙 (톤 수정은 여기서)
-    english.ts            영어 변종 규칙 (호주·뉴질랜드 / 미국)
-    schemas.ts            응답 JSON 스키마
-    store.ts              localStorage 외부 스토어, streak/뱃지 계산
-    types.ts, topics.ts
-```
+## 설정
 
-## 커스터마이즈
+전부 `.env.local` 한 파일에서 바뀝니다.
 
-- **튜터 성격·피드백 규칙** → `src/lib/prompts.ts`
-- **토픽 추가** → `src/lib/topics.ts`
-- **트로피 조건** → `src/lib/store.ts`의 `newBadges()` + `Dashboard.tsx`의 `BADGE_LABELS`
-- **색상·폰트** → `src/app/globals.css`의 `@theme`. 클라우드 화이트(`#F7F8FA`) 배경에 1px 헤어라인과 여백으로만 층을 만듭니다. 강조색은 딥 틸 하나뿐이고, 의미가 있는 자리에만 씁니다. 폰트는 IBM Plex Sans KR 한 종류로 영문·한글을 모두 처리합니다.
-- **차트 색** → `Dashboard.tsx`의 `LINE`·`RAMP` 상수. `LINE`은 흰 카드 위 5.4:1 대비, `RAMP`는 밝기가 단조 감소하는 단일 색조 램프입니다. 바꾸면 두 성질을 유지하세요.
-- **표시 언어** → 학습 재료(질문·리라이트·표현·쉐도잉)는 영어, 설명(실수 이유·표현 뜻·레벨 코멘트)은 한국어입니다. 규칙은 `src/lib/prompts.ts`의 LANGUAGE 절에 있고, UI 문구는 각 컴포넌트에 직접 들어 있습니다.
-- **영어 변종** → `src/lib/english.ts`. 호주·뉴질랜드(기본) 또는 미국식. 아래 절 참고.
+| 변수 | 기본값 | 하는 일 |
+|---|---|---|
+| `LLM_PROVIDER` | `gemini` | `gemini` 또는 `claude` |
+| `GEMINI_API_KEY` | — | Gemini를 쓸 때 필수 |
+| `ANTHROPIC_API_KEY` | — | Claude를 쓸 때 필수 |
+| `GEMINI_MODEL` | `gemini-3.6-flash` | Pro로 바꾸면 무료 티어를 벗어납니다 |
+| `ENGLISH_VARIANT` | `anz` | 가르치는 영어의 종류 ([아래](#영어-변종-호주뉴질랜드--미국)) |
+| `NEXT_PUBLIC_ENGLISH_VARIANT` | `anz` | 쉐도잉 음성 선택용. 위와 같은 값으로 |
+| `YAP_BACKUP` | 없음 | 자동 백업 경로. 비우면 백업 안 함 |
+| `YAP_DB` | `data/yap.db` | DB 파일 위치 |
+| `FREE_TIER_DAILY_REQUESTS` | `20` | 사용량 카드에 표시할 한도. `off`로 끄기 |
 
-## 영어 변종 (호주·뉴질랜드 / 미국)
+### 모델 프로바이더
 
-가르치는 영어의 종류를 고를 수 있습니다. `.env.local`에서 두 줄을 같은 값으로 맞추세요.
+| | Gemini (기본값) | Claude |
+|---|---|---|
+| 설정 | `LLM_PROVIDER=gemini`<br>`GEMINI_API_KEY=...` | `LLM_PROVIDER=claude`<br>`ANTHROPIC_API_KEY=...` |
+| 모델 | `gemini-3.6-flash` | `claude-opus-5` |
+| 비용 | 무료 티어 있음 (분당·일일 요청 제한) | 무료 티어 없음, 종량제 |
+
+무료 티어의 정확한 한도는 계정·지역마다 달라서
+[AI Studio 대시보드](https://aistudio.google.com/rate-limit)에서 확인해야 합니다.
+
+프로바이더 분기는 `src/lib/llm.ts`, 실제 호출은 `gemini.ts` / `claude.ts`에 각각 들어 있습니다.
+프롬프트·스키마·UI는 양쪽이 그대로 공유합니다.
+
+### 영어 변종 (호주·뉴질랜드 / 미국)
+
+가르치는 영어의 종류를 고를 수 있습니다. 두 줄을 같은 값으로 맞추세요.
 
 ```
 ENGLISH_VARIANT=anz              # anz(기본) | nz | au | us
@@ -153,7 +181,10 @@ NEXT_PUBLIC_ENGLISH_VARIANT=anz  # 쉐도잉 음성 선택용
 
 `both`는 `anz`의 옛 이름이라 그대로 써도 동작합니다.
 
-변종을 바꾸면 다섯 가지가 함께 바뀝니다.
+이건 철자 설정이 아닙니다. 변종을 바꾸면 **다섯 가지가 함께** 바뀝니다.
+
+<details>
+<summary>무엇이 어떻게 달라지는지 (펼치기)</summary>
 
 | | 호주·뉴질랜드 (`anz` / `nz` / `au`) | 미국 (`us`) |
 |---|---|---|
@@ -164,10 +195,78 @@ NEXT_PUBLIC_ENGLISH_VARIANT=anz  # 쉐도잉 음성 선택용
 | 교정 | 학습자가 미국식 표현을 쓰면 실수로 잡아서 고쳐줍니다 | 반대로 영연방식 표현을 쓰면 짚어줍니다 (틀린 게 아니라 "미국에선 이렇게 말해요" 톤으로) |
 | 발음 | en-NZ → en-AU → en-GB 순으로 목소리 선택 | en-US → en-CA 순 |
 
-어느 쪽이든 속어를 과하게 넣지 않도록 프롬프트에 제한을 걸어뒀습니다. 실사용 영어가 목적이지 흉내가 목적이 아니라서요.
+</details>
+
+어느 쪽이든 속어를 과하게 넣지 않도록 프롬프트에 제한을 걸어뒀습니다. 실사용 영어가 목적이지
+흉내가 목적이 아니라서요.
+
+## 커스터마이즈
+
+| 바꾸고 싶은 것 | 어디를 열면 되는지 |
+|---|---|
+| 튜터 성격 · 피드백 규칙 | `src/lib/prompts.ts` |
+| 토픽 추가 | `src/lib/topics.ts` |
+| 트로피 조건 | `src/lib/stats.ts`의 `newBadges()` + `Dashboard.tsx`의 `BADGE_LABELS` |
+| 색상 · 폰트 | `src/app/globals.css`의 `@theme` |
+| 차트 색 | `Dashboard.tsx`의 `LINE` · `RAMP` 상수 |
+| 표시 언어 | `src/lib/prompts.ts`의 LANGUAGE 절 (UI 문구는 각 컴포넌트에) |
+| 영어 변종 | `src/lib/english.ts` |
+
+**색을 바꿀 때** — 클라우드 화이트(`#F7F8FA`) 배경에 1px 헤어라인과 여백으로만 층을 만듭니다.
+강조색은 딥 틸 하나뿐이고 의미가 있는 자리에만 씁니다. 폰트는 IBM Plex Sans KR 한 종류로
+영문·한글을 모두 처리합니다.
+
+**차트 색을 바꿀 때** — `LINE`은 흰 카드 위 5.4:1 대비, `RAMP`는 밝기가 단조 감소하는 단일 색조
+램프입니다. 두 성질을 유지하세요.
+
+**표시 언어** — 학습 재료(질문 · 리라이트 · 표현 · 쉐도잉)는 영어, 설명(실수 이유 · 표현 뜻 ·
+레벨 코멘트)은 한국어입니다. 이건 취향이 아니라 규칙입니다 — 설명까지 영어면 읽는 데 힘을 다
+써서 정작 학습이 안 됩니다.
+
+## 구조
+
+```
+src/
+  app/
+    page.tsx                    앱 셸 (홈 ↔ 세션 ↔ 지난 연습 ↔ 표현, 트로피 토스트)
+    api/question/route.ts       토픽 → 질문 + 힌트
+    api/coach/route.ts          답변 → 6단계 피드백 + 저장 + 트로피 판정
+    api/sessions/route.ts       날짜별 목록          api/sessions/[id]  세션 전문
+    api/expressions/route.ts    배운 표현 목록       api/profile        레벨·통계
+    api/usage/route.ts          요청 수 · 토큰 · 예상 비용
+  components/
+    Home.tsx                    히어로 + 토픽 그리드 + 대시보드 + 사용량
+    Session.tsx                 질문 / 작성 / 피드백 루프
+    FeedbackView.tsx            피드백 6단계 카드 (세션과 지난 연습이 함께 씀)
+    History.tsx                 지난 연습 목록과 상세
+    Expressions.tsx             배운 표현 모아보기
+    Dashboard.tsx               스탯, CEFR 미터, 실수 추이 차트, 트로피
+    Usage.tsx                   요청·토큰·비용 카드
+    ui.tsx                      Card / Button / Pill 등 공용 요소
+  lib/
+    db.ts                       SQLite 연결 · 스키마 · 트랜잭션
+    repo.ts                     질의 (세션 저장, 통계, 표현, 사용량)
+    stats.ts                    순수 계산 — streak, 실수 추이, 트로피 판정
+    llm.ts                      프로바이더 분기 + 에러 메시지
+    gemini.ts / claude.ts       실제 호출 (structured output)
+    prompts.ts                  튜터 페르소나와 피드백 규칙
+    english.ts                  영어 변종 규칙
+    schemas.ts                  응답 JSON 스키마
+    pricing.ts                  모델별 단가 (사용량 카드용)
+    store.ts                    서버 프로필의 브라우저 캐시 + 최초 1회 이전
+    types.ts / topics.ts
+scripts/
+  db.mts                        npm run db
+  backup.mts                    npm run backup
+```
 
 ## 참고
 
 - 응답은 양쪽 프로바이더 모두 JSON schema로 강제됩니다 (`src/lib/schemas.ts`).
 - 피드백 생성은 thinking/effort `medium`, 질문 생성은 `low`.
-- 배포 시 `LLM_PROVIDER`와 해당 API 키를 환경변수로 넣으세요. 앱 자체에 인증이 없으니 공개 배포하면 API 비용이 누구에게나 열립니다 — 공개할 거면 인증이나 rate limit을 먼저 붙이세요.
+- 요청 한 판(답변 5개)이 대략 $0.10, 매일 한 판이면 월 $3 안팎입니다. 무료 티어에 머물면 $0.
+
+> [!CAUTION]
+> **앱 자체에 인증이 없습니다.** `next dev`는 localhost에만 바인딩되므로 노트북에서 쓰는 한
+> 안전하지만, 공개 배포하거나 `--hostname 0.0.0.0`으로 띄우면 API 키가 누구에게나 열립니다.
+> 그렇게 할 거면 인증이나 rate limit을 먼저 붙이세요.

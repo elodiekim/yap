@@ -40,16 +40,18 @@ export function readProfile(): Profile {
       .all() as unknown as Expression[]
   ).reverse();
 
-  const mistakeTags = (
-    conn
-      .prepare(
-        `select tag from mistakes group by tag
-         order by max(id) desc limit 60`,
-      )
-      .all() as unknown as { tag: string }[]
-  )
-    .map((r) => r.tag)
-    .reverse();
+  // Counted over recent sessions only. All-time counts would keep a pattern
+  // the learner has since fixed at the top of the list forever, and the point
+  // of this is to aim at what they are getting wrong *now*.
+  const mistakePatterns = conn
+    .prepare(
+      `select tag, count(*) as count from mistakes
+       where session_id in (select id from sessions order by id desc limit 30)
+       group by tag
+       order by count desc, max(id) desc
+       limit 12`,
+    )
+    .all() as unknown as { tag: string; count: number }[];
 
   const topicsPracticed = (
     conn
@@ -102,7 +104,10 @@ export function readProfile(): Profile {
   return {
     level: meta?.level ?? EMPTY_PROFILE.level,
     vocab,
-    mistakeTags,
+    mistakePatterns: mistakePatterns.map((r) => ({
+      tag: r.tag,
+      count: Number(r.count),
+    })),
     topicsPracticed,
     days,
     totalConversations: Number(totals.n),

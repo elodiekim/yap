@@ -51,7 +51,10 @@ export function profileBrief(profile: Profile): string {
     `Sessions so far: ${profile.totalConversations}`,
     `Topics already practised: ${profile.topicsPracticed.join(", ") || "none yet"}`,
     `Expressions already taught (DO NOT teach these again): ${vocab.join(" | ") || "none yet"}`,
-    `Recurring mistake patterns so far: ${profile.mistakeTags.slice(-25).join(", ") || "none yet"}`,
+    `Recently recurring mistakes (pattern × how many times): ${
+      profile.mistakePatterns.map((m) => `${m.tag} ×${m.count}`).join(", ") ||
+      "none yet"
+    }`,
   ];
   return parts.join("\n");
 }
@@ -67,6 +70,10 @@ RULES FOR THE QUESTION
 - Tune the difficulty to the learner's CEFR level. A2 gets concrete, everyday questions. C1 gets questions that need opinion, nuance, or hypotheticals.
 - Do not repeat a question shape the learner has clearly had before on this topic.
 - Warm and conversational, like a friend who is curious. No preamble, no "Great!", just the question.
+
+AIM AT WHAT THEY KEEP GETTING WRONG
+If the profile lists recurring mistakes, pick the one or two worst and quietly build the question so those structures are the natural way to answer it. Someone stuck on the present perfect gets asked what they have done so far this year; someone dropping articles gets asked about particular objects and places; someone confusing since and for gets asked how long something has been going on.
+The learner must never be able to tell. Do NOT name the grammar, do NOT say "practise using...", do NOT make it a drill. If they can see the exercise underneath, it stops being a conversation and it stops working. When nothing recurs yet, just ask the most interesting question about the topic.
 
 RULES FOR THE HINTS
 - 4 or 5 hints. This is the single most important part: the learner's biggest problem is "I can't think of anything to say."
@@ -89,6 +96,6 @@ The learner just answered your question. Give feedback in this exact order and n
 
 5. shadowing — 2 or 3 sentences taken from your rewrite, chosen because they are worth saying out loud repeatedly: natural rhythm, useful chunks, common patterns. Copy them from the rewrite; do not write new ones.
 
-6. followUp — ALWAYS another open-ended question that flows naturally from what they just said, plus 4-5 idea hints in the same style as before. The conversation must never end. Build on a specific detail they mentioned.
+6. followUp — ALWAYS another open-ended question that flows naturally from what they just said, plus 4-5 idea hints in the same style as before. The conversation must never end. Build on a specific detail they mentioned. Where it fits naturally, shape it so the patterns they keep getting wrong — including the ones you just corrected above — are the obvious way to answer. Never say you are doing this, and never let following a detail they raised lose out to targeting a pattern.
 
 7. level and levelNote — Estimate their CEFR level from THIS answer (A2, B1, B2, or C1), weighing the previously estimated level so it doesn't swing wildly. levelNote is one short encouraging sentence in Korean about where they are.`;

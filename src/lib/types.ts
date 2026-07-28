@@ -16,6 +16,12 @@ export interface Expression {
   example: string;
 }
 
+/** How often one kebab-case mistake tag has come up lately. */
+export interface MistakePattern {
+  tag: string;
+  count: number;
+}
+
 export interface FollowUp {
   question: string;
   hints: string[];
@@ -105,7 +111,8 @@ export interface Profile {
   /** Expressions already taught — never teach the same one twice. */
   vocab: Expression[];
   /** Short tags for recurring mistakes, e.g. "article-omission". */
-  mistakeTags: string[];
+  /** Recently recurring error patterns, most frequent first. */
+  mistakePatterns: MistakePattern[];
   topicsPracticed: string[];
   /** ISO dates (YYYY-MM-DD) on which the learner practised. */
   days: string[];
@@ -121,7 +128,7 @@ export interface Profile {
 export const EMPTY_PROFILE: Profile = {
   level: "B1",
   vocab: [],
-  mistakeTags: [],
+  mistakePatterns: [],
   topicsPracticed: [],
   days: [],
   totalConversations: 0,
