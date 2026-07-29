@@ -9,6 +9,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { tagLabel } from "../src/lib/tags.ts";
 
 const FILE = process.env.YAP_DB ?? join(process.cwd(), "data", "yap.db");
 
@@ -157,7 +158,11 @@ if (tags.length > 0) {
   console.log();
   console.log(bold("자주 틀리는 패턴"));
   rule();
-  for (const t of tags) console.log(`  ${String(t.n).padStart(3)}회  ${t.tag}`);
+  for (const t of tags) {
+    console.log(
+      `  ${String(t.n).padStart(3)}회  ${t.tag.padEnd(24)}${dim(tagLabel(t.tag))}`,
+    );
+  }
 }
 
 /* ------------------------------------------------------------------ 표현 */

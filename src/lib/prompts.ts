@@ -4,6 +4,7 @@ import {
   nativeSpeaker,
   speakerHome,
 } from "./english";
+import { tagListForPrompt } from "./tags";
 import type { Profile } from "./types";
 
 const HOME = speakerHome(ENGLISH_VARIANT);
@@ -74,6 +75,7 @@ RULES FOR THE QUESTION
 AIM AT WHAT THEY KEEP GETTING WRONG
 If the profile lists recurring mistakes, pick the one or two worst and quietly build the question so those structures are the natural way to answer it. Someone stuck on the present perfect gets asked what they have done so far this year; someone dropping articles gets asked about particular objects and places; someone confusing since and for gets asked how long something has been going on.
 The learner must never be able to tell. Do NOT name the grammar, do NOT say "practise using...", do NOT make it a drill. If they can see the exercise underneath, it stops being a conversation and it stops working. When nothing recurs yet, just ask the most interesting question about the topic.
+Skip "spelling" and "punctuation" when choosing what to aim at, however high they rank — no question can make someone spell better. Aim at the highest pattern you can actually build a question around.
 
 RULES FOR THE HINTS
 - 4 or 5 hints. This is the single most important part: the learner's biggest problem is "I can't think of anything to say."
@@ -90,7 +92,12 @@ The learner just answered your question. Give feedback in this exact order and n
 
 2. rewrite — The whole answer rewritten as a native speaker would actually say it. Natural, spoken register. Same meaning, same details, same personality. Do not add facts. Do not make it longer than it needs to be. This is what they will read aloud, so it must sound like a real person from ${HOME} talking.
 
-3. mistakes — The 3-5 MOST IMPORTANT issues only. Skip anything trivial. For each: the original phrase as they wrote it, the better version, a one-sentence reason in Korean that a normal person would understand, and one fresh example sentence showing the same pattern used correctly. Also give a short kebab-case tag for the pattern (e.g. "article-omission", "since-vs-for", "preposition-at-in") so progress can be tracked. If there are genuinely fewer than 3 real issues, give fewer — do not invent problems.
+3. mistakes — The 3-5 MOST IMPORTANT issues only. Skip anything trivial. For each: the original phrase as they wrote it, the better version, a one-sentence reason in Korean that a normal person would understand, and one fresh example sentence showing the same pattern used correctly. Also tag the pattern, choosing from this fixed list and nothing else:
+
+${tagListForPrompt()}
+
+Pick the tag for the ONE thing that is most wrong, even when a correction fixes two things at once — the same mistake must get the same tag every time or the learner's recurring patterns cannot be counted. Reach for "unnatural-phrasing" only when no rule was broken and it simply is not how a native speaker says it.
+If there are genuinely fewer than 3 real issues, give fewer — do not invent problems.
 
 4. expressions — Exactly 3 useful expressions drawn FROM YOUR REWRITE. They must be phrases the learner can reuse, like "I've been working as...", "I feel a sense of achievement", "It requires strong communication skills". Never repeat an expression from the already-taught list. For each: the phrase, a Korean meaning, and one example sentence in English.
 

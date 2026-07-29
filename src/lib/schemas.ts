@@ -1,3 +1,5 @@
+import { TAGS } from "./tags";
+
 const hints = {
   type: "array",
   minItems: 4,
@@ -30,7 +32,9 @@ export const FEEDBACK_SCHEMA = {
           better: { type: "string" },
           reason: { type: "string" },
           example: { type: "string" },
-          tag: { type: "string" },
+          // Enum, not a free string: the provider now rejects an invented tag
+          // instead of letting it quietly break the pattern counts.
+          tag: { type: "string", enum: TAGS },
         },
         required: ["original", "better", "reason", "example", "tag"],
         additionalProperties: false,

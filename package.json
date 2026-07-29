@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "backup": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --env-file-if-exists=.env.local scripts/backup.mts",
-    "db": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --env-file-if-exists=.env.local scripts/db.mts"
+    "db": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --env-file-if-exists=.env.local scripts/db.mts",
+    "retag": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --env-file-if-exists=.env.local scripts/retag.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
