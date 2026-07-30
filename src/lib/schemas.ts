@@ -1,4 +1,5 @@
 import { TAGS } from "./tags";
+import type { Mode } from "./types";
 
 const hints = {
   type: "array",
@@ -17,71 +18,89 @@ export const PROMPT_SCHEMA = {
   additionalProperties: false,
 } as Record<string, unknown>;
 
-export const FEEDBACK_SCHEMA = {
-  type: "object",
-  properties: {
-    praise: { type: "string" },
-    rewrite: { type: "string" },
-    mistakes: {
-      type: "array",
-      maxItems: 5,
-      items: {
+/**
+ * How much feedback each mode asks for.
+ *
+ * The counts are the schema's job, not the prompt's: five corrections on a
+ * one-sentence answer is not a lighter mode, it is a harsher one, and asking
+ * politely for fewer is less reliable than making more impossible.
+ */
+const SIZES: Record<Mode, { mistakes: number; expressions: number; shadowing: [number, number] }> = {
+  normal: { mistakes: 5, expressions: 3, shadowing: [2, 3] },
+  easy: { mistakes: 2, expressions: 1, shadowing: [1, 1] },
+};
+
+function feedbackSchema(mode: Mode): Record<string, unknown> {
+  const size = SIZES[mode];
+  return {
+    type: "object",
+    properties: {
+      praise: { type: "string" },
+      rewrite: { type: "string" },
+      mistakes: {
+        type: "array",
+        maxItems: size.mistakes,
+        items: {
+          type: "object",
+          properties: {
+            original: { type: "string" },
+            better: { type: "string" },
+            reason: { type: "string" },
+            example: { type: "string" },
+            // Enum, not a free string: the provider now rejects an invented tag
+            // instead of letting it quietly break the pattern counts.
+            tag: { type: "string", enum: TAGS },
+          },
+          required: ["original", "better", "reason", "example", "tag"],
+          additionalProperties: false,
+        },
+      },
+      expressions: {
+        type: "array",
+        minItems: size.expressions,
+        maxItems: size.expressions,
+        items: {
+          type: "object",
+          properties: {
+            phrase: { type: "string" },
+            meaning: { type: "string" },
+            example: { type: "string" },
+          },
+          required: ["phrase", "meaning", "example"],
+          additionalProperties: false,
+        },
+      },
+      shadowing: {
+        type: "array",
+        minItems: size.shadowing[0],
+        maxItems: size.shadowing[1],
+        items: { type: "string" },
+      },
+      followUp: {
         type: "object",
         properties: {
-          original: { type: "string" },
-          better: { type: "string" },
-          reason: { type: "string" },
-          example: { type: "string" },
-          // Enum, not a free string: the provider now rejects an invented tag
-          // instead of letting it quietly break the pattern counts.
-          tag: { type: "string", enum: TAGS },
+          question: { type: "string" },
+          hints,
         },
-        required: ["original", "better", "reason", "example", "tag"],
+        required: ["question", "hints"],
         additionalProperties: false,
       },
+      level: { type: "string", enum: ["A2", "B1", "B2", "C1"] },
+      levelNote: { type: "string" },
     },
-    expressions: {
-      type: "array",
-      minItems: 3,
-      maxItems: 3,
-      items: {
-        type: "object",
-        properties: {
-          phrase: { type: "string" },
-          meaning: { type: "string" },
-          example: { type: "string" },
-        },
-        required: ["phrase", "meaning", "example"],
-        additionalProperties: false,
-      },
-    },
-    shadowing: {
-      type: "array",
-      minItems: 2,
-      maxItems: 3,
-      items: { type: "string" },
-    },
-    followUp: {
-      type: "object",
-      properties: {
-        question: { type: "string" },
-        hints,
-      },
-      required: ["question", "hints"],
-      additionalProperties: false,
-    },
-    level: { type: "string", enum: ["A2", "B1", "B2", "C1"] },
-    levelNote: { type: "string" },
-  },
-  required: [
-    "praise",
-    "rewrite",
-    "mistakes",
-    "expressions",
-    "shadowing",
-    "followUp",
-    "level",
-    "levelNote",
-  ],
-  additionalProperties: false,
-} as Record<string, unknown>;
+    required: [
+      "praise",
+      "rewrite",
+      "mistakes",
+      "expressions",
+      "shadowing",
+      "followUp",
+      "level",
+      "levelNote",
+    ],
+    additionalProperties: false,
+  };
+}
+
+export const FEEDBACK_SCHEMA = feedbackSchema("normal");
+export const EASY_FEEDBACK_SCHEMA = feedbackSchema("easy");

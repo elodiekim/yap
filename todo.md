@@ -95,3 +95,22 @@
 혼자 쓰는 앱이라 신고 기능은 과하다.
 
 - [ ] 실수 항목 하나를 "이건 아닌 것 같아요"로 지우기
+
+---
+
+## 10. 애플 디자인 스킬 적용 후보 (모션 다듬기)
+
+`apple-design` 스킬로 코드 리뷰한 결과. 위 항목들과 달리 기획 위반이 아니라 마감 다듬기라
+우선순위 밖. 폰 미지원 스코프(`docs/product-spec.md:315`)라 드래그·스와이프·러버밴딩 계열
+원칙은 애초에 적용 대상이 없어서 제외.
+
+- [ ] 뱃지 토스트에 exit 애니메이션 — 등장은 `.animate-rise`인데 사라질 땐 즉시 컷
+      (`src/app/page.tsx:68-72`, `142-159`)
+- [ ] 힌트 카드 접기 애니메이션 — 펼칠 땐 스태거 페이드인, 접을 땐 즉시 사라짐
+      (`src/components/Session.tsx:244-277`)
+- [ ] (선택) hover 트랜지션을 스프링 커브로 — 지금은 linear/ease뿐
+      (`src/components/ui.tsx:97`, `Home.tsx:67`, `History.tsx:213`, `Dashboard.tsx:88`, `Usage.tsx:72`)
+- [ ] (선택, 파급 범위 큼) 헤딩 letter-spacing을 크기별로 스케일 — 지금은 전 크기 고정값
+      (`src/app/globals.css:54`)
+- 보류: backdrop-blur 확장 금지 — 현재 `page.tsx:76` 한 곳만 절제되게 쓰는 중이고,
+  늘리면 AGENTS.md가 명시한 "두 번 거부당한 글래스모피즘"과 충돌

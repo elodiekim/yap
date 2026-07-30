@@ -6,6 +6,7 @@ import { History } from "@/components/History";
 import { Home } from "@/components/Home";
 import { Session } from "@/components/Session";
 import { Logo } from "@/components/ui";
+import type { Mode } from "@/lib/types";
 import {
   getProfileServerSnapshot,
   getProfileSnapshot,
@@ -43,12 +44,14 @@ export default function Page() {
     getProfileServerSnapshot,
   );
   const [topic, setTopic] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>("normal");
   const [view, setView] = useState<"home" | "history" | "expressions">("home");
   const [openSession, setOpenSession] = useState<number | null>(null);
   const [badges, setBadges] = useState<Badge[]>([]);
 
   function goHome() {
     setTopic(null);
+    setMode("normal");
     setView("home");
     setOpenSession(null);
   }
@@ -103,8 +106,9 @@ export default function Page() {
 
       {topic ? (
         <Session
-          key={topic}
+          key={`${mode}:${topic}`}
           topic={topic}
+          mode={mode}
           onBadges={setBadges}
           onExit={goHome}
         />
@@ -121,7 +125,10 @@ export default function Page() {
       ) : (
         <Home
           profile={profile}
-          onStart={setTopic}
+          onStart={(t, m) => {
+            setMode(m);
+            setTopic(t);
+          }}
           onHistory={() => go("history")}
           onExpressions={() => go("expressions")}
           onReset={() => {

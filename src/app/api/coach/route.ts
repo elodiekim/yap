@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { friendlyError, generateJSON } from "@/lib/llm";
-import { FEEDBACK_SCHEMA } from "@/lib/schemas";
-import { COACH_SYSTEM, profileBrief } from "@/lib/prompts";
+import { EASY_FEEDBACK_SCHEMA, FEEDBACK_SCHEMA } from "@/lib/schemas";
+import { COACH_SYSTEM, COACH_SYSTEM_EASY, profileBrief } from "@/lib/prompts";
 import { logUsage, readProfile, saveSession } from "@/lib/repo";
 import { countWords, today } from "@/lib/stats";
 import { topicLabel } from "@/lib/topics";
-import type { Feedback } from "@/lib/types";
+import type { Feedback, Mode } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -23,6 +23,7 @@ export async function POST(req: Request) {
       answer?: string;
       history?: HistoryTurn[];
       practisedOn?: string;
+      mode?: Mode;
     };
 
     const { topic, question, answer } = body;
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
       );
     }
 
+    const mode: Mode = body.mode === "easy" ? "easy" : "normal";
     const profile = readProfile();
     const history = (body.history ?? []).slice(-4);
 
@@ -46,7 +48,7 @@ export async function POST(req: Request) {
       : "(this is the first turn of the session)";
 
     const { data: feedback, usage } = await generateJSON<Feedback>({
-      system: COACH_SYSTEM,
+      system: mode === "easy" ? COACH_SYSTEM_EASY : COACH_SYSTEM,
       user: [
         `Topic: ${topicLabel(topic)}`,
         "",
@@ -64,7 +66,7 @@ export async function POST(req: Request) {
         "",
         "Now give your feedback.",
       ].join("\n"),
-      schema: FEEDBACK_SCHEMA,
+      schema: mode === "easy" ? EASY_FEEDBACK_SCHEMA : FEEDBACK_SCHEMA,
       effort: "medium",
       // Reasoning shares this budget with the response on both providers, so
       // leave headroom or the JSON gets truncated.
@@ -83,6 +85,7 @@ export async function POST(req: Request) {
       words: countWords(answer),
       // The browser knows the learner's calendar date; the server may be on UTC.
       practisedOn: day,
+      mode,
       feedback,
     });
 

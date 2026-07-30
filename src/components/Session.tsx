@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Feedback, Profile, Prompt, Turn } from "@/lib/types";
+import type { Feedback, Mode, Profile, Prompt, Turn } from "@/lib/types";
 import { topicKo, topicLabel } from "@/lib/topics";
 import { countWords, setProfile, today, type Badge } from "@/lib/store";
 import { FeedbackView } from "./FeedbackView";
@@ -9,6 +9,7 @@ import { Button, Card, Meta, SectionLabel, Thinking } from "./ui";
 
 interface Props {
   topic: string;
+  mode: Mode;
   onBadges: (b: Badge[]) => void;
   onExit: () => void;
 }
@@ -31,28 +32,32 @@ interface CoachResponse {
  */
 const inFlight = new Map<string, Promise<Prompt>>();
 
-function askQuestion(topic: string): Promise<Prompt> {
-  const existing = inFlight.get(topic);
+function askQuestion(topic: string, mode: Mode): Promise<Prompt> {
+  const key = `${mode}:${topic}`;
+  const existing = inFlight.get(key);
   if (existing) return existing;
 
   const request = fetch("/api/question", {
     method: "POST",
     headers: { "content-type": "application/json" },
     // The route reads the learner's history from the database itself.
-    body: JSON.stringify({ topic, practisedOn: today() }),
+    body: JSON.stringify({ topic, mode, practisedOn: today() }),
   }).then(async (r) => {
     const data = await r.json();
     if (!r.ok) throw new Error(data.error ?? "Couldn't get a question.");
     return data as Prompt;
   });
 
-  inFlight.set(topic, request);
+  inFlight.set(key, request);
   // Settle-only cleanup; the caller owns the rejection, so swallow it here.
-  request.catch(() => {}).finally(() => inFlight.delete(topic));
+  request.catch(() => {}).finally(() => inFlight.delete(key));
   return request;
 }
 
-export function Session({ topic, onBadges, onExit }: Props) {
+export function Session({ topic, mode, onBadges, onExit }: Props) {
+  const easy = mode === "easy";
+  // The floor is what made the app contradict its own slogan on tired days.
+  const floor = easy ? 3 : 8;
   const [turns, setTurns] = useState<Turn[]>([]);
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [draft, setDraft] = useState("");
@@ -67,7 +72,7 @@ export function Session({ topic, onBadges, onExit }: Props) {
   // rather than synchronously here. `attempt` re-runs it after a failure.
   useEffect(() => {
     let cancelled = false;
-    askQuestion(topic)
+    askQuestion(topic, mode)
       .then((p) => {
         if (!cancelled) setPrompt(p);
       })
@@ -80,7 +85,7 @@ export function Session({ topic, onBadges, onExit }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [topic, attempt]);
+  }, [topic, mode, attempt]);
 
   /**
    * The opening question is the one call with no way back: a 429 here left the
@@ -95,7 +100,7 @@ export function Session({ topic, onBadges, onExit }: Props) {
   }
 
   const words = countWords(draft);
-  const canSubmit = words >= 8 && !grading && !!prompt;
+  const canSubmit = words >= floor && !grading && !!prompt;
 
   async function submit() {
     if (!prompt || !canSubmit) return;
@@ -112,6 +117,7 @@ export function Session({ topic, onBadges, onExit }: Props) {
           question: prompt.question,
           answer,
           history: turns.map((t) => ({ question: t.question, answer: t.answer })),
+          mode,
           // The server is on UTC; the streak counts the learner's calendar day.
           practisedOn: today(),
         }),
@@ -158,6 +164,7 @@ export function Session({ topic, onBadges, onExit }: Props) {
             {topicLabel(topic)}
           </span>
           <span className="ko text-[13px] text-muted">{topicKo(topic)}</span>
+          {easy ? <Meta accent>가볍게</Meta> : null}
           {turns.length > 0 ? <Meta>답변 {turns.length}개</Meta> : null}
         </div>
         <Button variant="quiet" onClick={onExit}>
@@ -193,6 +200,8 @@ export function Session({ topic, onBadges, onExit }: Props) {
               words={words}
               grading={grading}
               canSubmit={canSubmit}
+              floor={floor}
+              easy={easy}
             />
           </div>
         ) : null}
@@ -299,6 +308,8 @@ function Composer({
   words,
   grading,
   canSubmit,
+  floor,
+  easy,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -306,6 +317,8 @@ function Composer({
   words: number;
   grading: boolean;
   canSubmit: boolean;
+  floor: number;
+  easy: boolean;
 }) {
   return (
     <Card className="p-4">
@@ -316,14 +329,26 @@ function Composer({
           if ((e.metaKey || e.ctrlKey) && e.key === "Enter") onSubmit();
         }}
         disabled={grading}
-        rows={8}
-        placeholder="영어로 3~10문장 정도 써보세요. 틀려도 괜찮으니 일단 끝까지 써보는 게 중요해요."
+        rows={easy ? 3 : 8}
+        placeholder={
+          easy
+            ? "영어로 한 문장이면 됩니다. 그거면 오늘 몫은 다 한 거예요."
+            : "영어로 3~10문장 정도 써보세요. 틀려도 괜찮으니 일단 끝까지 써보는 게 중요해요."
+        }
         className="w-full resize-y rounded-lg bg-transparent text-[16px] leading-[1.85] text-ink outline-none placeholder:text-faint disabled:opacity-60"
       />
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-hair pt-3">
         <p className="ko text-[13px] text-muted">
-          {words < 8 ? (
-            <>{8 - words}단어만 더 쓰면 제출할 수 있어요</>
+          {words < floor ? (
+            <>{floor - words}단어만 더 쓰면 제출할 수 있어요</>
+          ) : easy ? (
+            <>
+              {words} words · 이거면 충분해요 ·{" "}
+              <kbd className="rounded border border-hair-strong bg-sunk px-1 py-0.5 text-[11px]">
+                ⌘↵
+              </kbd>{" "}
+              로 제출
+            </>
           ) : (
             <>
               {words} words ·{" "}

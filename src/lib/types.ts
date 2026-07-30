@@ -1,5 +1,13 @@
 export type Level = "A2" | "B1" | "B2" | "C1";
 
+/**
+ * How much the learner is up for today.
+ *
+ * "easy" is not a beginner setting — it is a tired-day setting, and it counts
+ * toward the streak exactly the same. See docs/product-spec.md §5.6.
+ */
+export type Mode = "normal" | "easy";
+
 export const LEVELS: Level[] = ["A2", "B1", "B2", "C1"];
 
 export interface Mistake {

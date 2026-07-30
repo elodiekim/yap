@@ -8,6 +8,7 @@ import {
   type ExpressionEntry,
   type Feedback,
   type Level,
+  type Mode,
   type Profile,
   type SessionDetail,
   type SessionSummary,
@@ -156,6 +157,7 @@ export interface SessionInput {
   words: number;
   /** Local calendar date from the browser — see §8 on why this isn't derived. */
   practisedOn: string;
+  mode: Mode;
   feedback: Feedback;
 }
 
@@ -168,11 +170,15 @@ export function saveSession(input: SessionInput): {
 
   const after = tx(() => {
     const conn = db();
+    // An easy session records no level at all. A tired one-liner is not
+    // evidence about anyone's English, and letting it demote the learner would
+    // punish exactly the day this mode exists to make painless (§5.6).
+    const easy = input.mode === "easy";
     const inserted = conn
       .prepare(
         `insert into sessions
-           (practised_on, topic, question, answer, word_count, mistake_count, level, feedback, source)
-         values (?, ?, ?, ?, ?, ?, ?, ?, 'live')`,
+           (practised_on, topic, question, answer, word_count, mistake_count, level, feedback, source, mode)
+         values (?, ?, ?, ?, ?, ?, ?, ?, 'live', ?)`,
       )
       .run(
         input.practisedOn,
@@ -181,8 +187,9 @@ export function saveSession(input: SessionInput): {
         input.answer,
         input.words,
         feedback.mistakes.length,
-        feedback.level,
+        easy ? null : feedback.level,
         JSON.stringify(feedback),
+        input.mode,
       );
     const sessionId = Number(inserted.lastInsertRowid);
 
@@ -204,11 +211,13 @@ export function saveSession(input: SessionInput): {
       addExpression.run(sessionId, e.phrase, e.meaning, e.example);
     }
 
-    conn
-      .prepare(
-        "update profile set level = ?, updated_at = datetime('now') where id = 1",
-      )
-      .run(feedback.level);
+    if (!easy) {
+      conn
+        .prepare(
+          "update profile set level = ?, updated_at = datetime('now') where id = 1",
+        )
+        .run(feedback.level);
+    }
 
     return readProfile();
   });
@@ -261,6 +270,20 @@ export function listSessions(limit = 60, offset = 0): SessionSummary[] {
     preview: r.preview,
     imported: r.source === "import",
   }));
+}
+
+/** Actual question text asked on this topic before, oldest first — so the
+ * next question can be told what to avoid instead of just that the topic
+ * has come up. Imported rows have no question text and are excluded. */
+export function recentQuestions(topic: string, limit = 3): string[] {
+  const rows = db()
+    .prepare(
+      `select question from sessions
+       where topic = ? and question is not null
+       order by id desc limit ?`,
+    )
+    .all(topic, limit) as unknown as { question: string }[];
+  return rows.map((r) => r.question).reverse();
 }
 
 export function countSessions(): number {

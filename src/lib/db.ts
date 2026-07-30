@@ -30,6 +30,7 @@ create table if not exists sessions (
   level          text check (level in ('A2','B1','B2','C1')),
   feedback       text,
   source         text not null default 'live' check (source in ('live','import')),
+  mode           text not null default 'normal' check (mode in ('normal','easy')),
   created_at     text not null default (datetime('now'))
 );
 create index if not exists sessions_day on sessions (practised_on);
@@ -75,6 +76,25 @@ create table if not exists usage_log (
 create index if not exists usage_day on usage_log (day);
 `;
 
+/**
+ * `create table if not exists` cannot add a column to a table that already
+ * exists, so columns introduced later need this. Adding one is safe to run on
+ * every open; dropping or retyping one is not, and would need a real migration.
+ */
+function addColumnIfMissing(
+  conn: DatabaseSync,
+  table: string,
+  column: string,
+  definition: string,
+) {
+  const columns = conn
+    .prepare(`pragma table_info(${table})`)
+    .all() as unknown as { name: string }[];
+  if (!columns.some((c) => c.name === column)) {
+    conn.exec(`alter table ${table} add column ${definition}`);
+  }
+}
+
 function open(): DatabaseSync {
   mkdirSync(dirname(FILE), { recursive: true });
   const conn = new DatabaseSync(FILE);
@@ -83,6 +103,12 @@ function open(): DatabaseSync {
   conn.exec("pragma journal_mode = WAL");
   conn.exec("pragma foreign_keys = ON");
   conn.exec(SCHEMA);
+  addColumnIfMissing(
+    conn,
+    "sessions",
+    "mode",
+    "mode text not null default 'normal' check (mode in ('normal','easy'))",
+  );
   conn.exec("insert or ignore into profile (id) values (1)");
   return conn;
 }

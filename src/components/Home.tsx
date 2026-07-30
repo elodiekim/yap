@@ -1,7 +1,7 @@
 "use client";
 
 import { TOPICS } from "@/lib/topics";
-import type { Profile } from "@/lib/types";
+import type { Mode, Profile } from "@/lib/types";
 import { streak } from "@/lib/store";
 import { Dashboard } from "./Dashboard";
 import { Usage } from "./Usage";
@@ -15,7 +15,7 @@ export function Home({
   onReset,
 }: {
   profile: Profile;
-  onStart: (topic: string) => void;
+  onStart: (topic: string, mode: Mode) => void;
   onHistory: () => void;
   onExpressions: () => void;
   onReset: () => void;
@@ -63,7 +63,7 @@ export function Home({
                 style={{ animationDelay: `${i * 25}ms` }}
               >
                 <button
-                  onClick={() => onStart(t.id)}
+                  onClick={() => onStart(t.id, "normal")}
                   className="group flex h-full w-full items-start gap-3 rounded-card border border-hair bg-card p-4 text-left shadow-card transition-all duration-150 hover:border-hair-strong hover:shadow-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
                   <span
@@ -92,6 +92,8 @@ export function Home({
             );
           })}
         </ul>
+
+        <LightDay onStart={onStart} />
       </section>
 
       {!fresh ? (
@@ -134,6 +136,29 @@ export function Home({
           </p>
         </Card>
       )}
+    </div>
+  );
+}
+
+/**
+ * The way in on a day with nothing left. Deliberately quieter than the topic
+ * grid — it should be findable, not tempting (spec §5.6) — and it picks the
+ * topic itself, because choosing is part of what feels like too much today.
+ */
+function LightDay({ onStart }: { onStart: (topic: string, mode: Mode) => void }) {
+  return (
+    <div className="mt-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-hair pt-4">
+      <p className="ko text-[13px] text-muted">
+        오늘은 여력이 없나요? 한 문장이면 충분합니다.
+      </p>
+      <button
+        onClick={() =>
+          onStart(TOPICS[Math.floor(Math.random() * TOPICS.length)].id, "easy")
+        }
+        className="ko rounded-md text-[13px] text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      >
+        가볍게 한 문장 →
+      </button>
     </div>
   );
 }
