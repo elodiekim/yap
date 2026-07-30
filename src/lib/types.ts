@@ -120,6 +120,12 @@ export interface Profile {
   totalWords: number;
   /** One entry per session: how many major mistakes were flagged. */
   mistakeHistory: { date: string; count: number; words: number }[];
+  /**
+   * One entry per session that had any mistake: how many of its tags had
+   * already been flagged in an earlier session. This, not the raw count, is
+   * what the progress chart reads — see docs/product-spec.md §5.4.
+   */
+  recurrenceHistory: { date: string; total: number; repeats: number }[];
   levelHistory: { date: string; level: Level }[];
   badges: string[];
   updatedAt: string;
@@ -134,6 +140,7 @@ export const EMPTY_PROFILE: Profile = {
   totalConversations: 0,
   totalWords: 0,
   mistakeHistory: [],
+  recurrenceHistory: [],
   levelHistory: [],
   badges: [],
   updatedAt: "",

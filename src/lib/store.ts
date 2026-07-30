@@ -4,7 +4,7 @@ import { EMPTY_PROFILE, type Profile } from "./types";
 
 export {
   countWords,
-  mistakeTrend,
+  recurrenceTrend,
   streak,
   today,
   wordsToday,

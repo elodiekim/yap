@@ -50,13 +50,33 @@ export function wordsToday(profile: Profile): number {
     .reduce((sum, h) => sum + h.words, 0);
 }
 
-/** Rolling average of major mistakes per session, oldest → newest. */
-export function mistakeTrend(profile: Profile): { date: string; avg: number }[] {
-  const recent = profile.mistakeHistory.slice(-14);
+/**
+ * Share of flagged mistakes that were patterns the learner had already been
+ * told about, oldest → newest, smoothed over three sessions.
+ *
+ * This replaced "mistakes per answer", which could not move: the prompt asks
+ * for the 3-5 most important issues, and across ten real sessions the count
+ * was 3, 4 or 5 every single time — a floor and a ceiling at once. Dividing by
+ * length was worse; it made a 30-word answer the worst session on record and
+ * would have put one-sentence days off the chart entirely.
+ *
+ * Recurrence moves because it measures something the learner controls: not how
+ * much was wrong, but how much of it was old news.
+ */
+const WARM_UP = 3;
+
+export function recurrenceTrend(
+  profile: Profile,
+): { date: string; rate: number }[] {
+  // The opening sessions have almost no past to repeat, so they read near 0%
+  // no matter how the learner did, and every beginner would be told their
+  // recurrence is "rising". Drop them rather than explain an artefact.
+  const recent = profile.recurrenceHistory.slice(WARM_UP).slice(-14);
   return recent.map((h, i) => {
     const window = recent.slice(Math.max(0, i - 2), i + 1);
-    const avg = window.reduce((s, w) => s + w.count, 0) / window.length;
-    return { date: h.date, avg };
+    const repeats = window.reduce((s, w) => s + w.repeats, 0);
+    const total = window.reduce((s, w) => s + w.total, 0);
+    return { date: h.date, rate: total === 0 ? 0 : (repeats / total) * 100 };
   });
 }
 

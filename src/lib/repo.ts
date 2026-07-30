@@ -82,6 +82,35 @@ export function readProfile(): Profile {
       .all() as unknown as { date: string; count: number; words: number }[]
   ).reverse();
 
+  // How much of each session was ground already covered. A tag counts as a
+  // repeat when it was first flagged in an *earlier* session, so the very
+  // first appearance of a pattern is never held against the learner.
+  // Sessions with no mistakes are absent rather than zero: recurrence is
+  // undefined when nothing was flagged, and charting it as 0% would read as
+  // a perfect session rather than an empty one.
+  const recurrenceHistory = (
+    conn
+      .prepare(
+        `select s.practised_on as date,
+                count(m.tag) as total,
+                sum(case when f.first_seen < s.id then 1 else 0 end) as repeats
+         from sessions s
+         join mistakes m on m.session_id = s.id
+         join (select tag, min(session_id) as first_seen
+               from mistakes group by tag) f on f.tag = m.tag
+         group by s.id
+         order by s.id desc
+         limit ${CAP}`,
+      )
+      .all() as unknown as { date: string; total: number; repeats: number }[]
+  )
+    .map((r) => ({
+      date: r.date,
+      total: Number(r.total),
+      repeats: Number(r.repeats),
+    }))
+    .reverse();
+
   // Only the points where the level actually moved, matching what the old
   // client-side store recorded.
   const levelRows = conn
@@ -113,6 +142,7 @@ export function readProfile(): Profile {
     totalConversations: Number(totals.n),
     totalWords: Number(totals.w),
     mistakeHistory,
+    recurrenceHistory,
     levelHistory,
     badges,
     updatedAt: meta?.updated_at ?? "",

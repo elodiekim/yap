@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { LEVELS, type Profile } from "@/lib/types";
-import { mistakeTrend, streak, wordsToday } from "@/lib/store";
+import { recurrenceTrend, streak, wordsToday } from "@/lib/store";
 import { Card, SectionLabel } from "./ui";
 
 /**
@@ -17,7 +17,7 @@ const RAMP = ["#cfe6e0", "#9bcdc2", "#5fa697", "#1f6f60"];
 
 export function Dashboard({ profile }: { profile: Profile }) {
   const days = streak(profile.days);
-  const trend = useMemo(() => mistakeTrend(profile), [profile]);
+  const trend = useMemo(() => recurrenceTrend(profile), [profile]);
 
   return (
     <div className="space-y-3">
@@ -35,7 +35,7 @@ export function Dashboard({ profile }: { profile: Profile }) {
       </Card>
 
       <LevelMeter profile={profile} />
-      <MistakeTrend trend={trend} />
+      <Recurrence trend={trend} />
       <Badges profile={profile} />
     </div>
   );
@@ -111,17 +111,17 @@ function LevelMeter({ profile }: { profile: Profile }) {
   );
 }
 
-function MistakeTrend({ trend }: { trend: { date: string; avg: number }[] }) {
+function Recurrence({ trend }: { trend: { date: string; rate: number }[] }) {
   const [hover, setHover] = useState<number | null>(null);
   const [showTable, setShowTable] = useState(false);
 
   if (trend.length < 3) {
     return (
       <Card className="p-5">
-        <SectionLabel en="Mistakes per answer" ko="답변당 실수" />
+        <SectionLabel en="Old mistakes coming back" ko="같은 실수를 또 하는 비율" />
         <p className="ko mt-2.5 text-[13px] leading-relaxed text-muted">
-          답변 {3 - trend.length}개를 더 쓰면 실수가 줄고 있는지 그래프로
-          보여줍니다.
+          답변 {3 - trend.length}개를 더 쓰면, 지적받았던 실수가 다시 나오는
+          비율이 줄고 있는지 보여줍니다.
         </p>
       </Card>
     );
@@ -130,23 +130,28 @@ function MistakeTrend({ trend }: { trend: { date: string; avg: number }[] }) {
   const W = 640;
   const H = 110;
   const PAD = { t: 12, r: 12, b: 12, l: 12 };
-  const max = Math.max(2, ...trend.map((t) => t.avg));
+  const max = 100;
   const x = (i: number) =>
     PAD.l + (i / (trend.length - 1)) * (W - PAD.l - PAD.r);
   const y = (v: number) => PAD.t + (1 - v / max) * (H - PAD.t - PAD.b);
 
   const path = trend
-    .map((t, i) => `${i ? "L" : "M"}${x(i)},${y(t.avg)}`)
+    .map((t, i) => `${i ? "L" : "M"}${x(i)},${y(t.rate)}`)
     .join(" ");
   const last = trend[trend.length - 1];
   const first = trend[0];
-  const delta = last.avg - first.avg;
+  // Recent direction, not first-versus-last: one unusual early session should
+  // not decide what the whole card says.
+  const half = Math.max(1, Math.floor(trend.length / 2));
+  const mean = (xs: { rate: number }[]) =>
+    xs.reduce((s, t) => s + t.rate, 0) / xs.length;
+  const delta = mean(trend.slice(-half)) - mean(trend.slice(0, half));
   const active = hover === null ? trend.length - 1 : hover;
 
   return (
     <Card className="p-5">
       <div className="flex items-baseline justify-between gap-2">
-        <SectionLabel en="Mistakes per answer" ko="답변당 실수" />
+        <SectionLabel en="Old mistakes coming back" ko="같은 실수를 또 하는 비율" />
         <button
           onClick={() => setShowTable((s) => !s)}
           className="shrink-0 text-[13px] text-muted hover:text-ink"
@@ -156,39 +161,40 @@ function MistakeTrend({ trend }: { trend: { date: string; avg: number }[] }) {
       </div>
 
       <p className="ko mt-2 text-[13px] leading-relaxed text-body">
-        {delta < -0.3 ? (
+        {delta < -8 ? (
           <>
-            {first.avg.toFixed(1)}개에서{" "}
+            {Math.round(first.rate)}%에서{" "}
             <span className="font-semibold text-ink">
-              {last.avg.toFixed(1)}개
+              {Math.round(last.rate)}%
             </span>
-            로 줄었어요. 처음보다 실수가 적어지고 있습니다.
+            로 줄었어요. 한 번 짚은 건 덜 반복하고 있다는 뜻입니다.
           </>
-        ) : delta > 0.3 ? (
+        ) : delta > 8 ? (
           <>
             <span className="font-semibold text-ink">
-              {last.avg.toFixed(1)}개
+              {Math.round(last.rate)}%
             </span>
-            로 늘었지만, 보통은 더 어려운 문장에 도전하고 있다는 뜻이에요.
+            로 늘었어요. 익숙한 실수가 다시 나오는 중이니, 아래 &ldquo;자주 틀리는
+            것&rdquo;을 한 번 훑어보면 좋겠어요.
           </>
         ) : (
           <>
-            답변당{" "}
+            최근 지적 중{" "}
             <span className="font-semibold text-ink">
-              {last.avg.toFixed(1)}개
-            </span>{" "}
-            정도로 유지되고 있어요.
+              {Math.round(last.rate)}%
+            </span>
+            가 전에도 짚었던 것이에요.
           </>
         )}
       </p>
 
       {showTable ? (
         <table className="mt-4 w-full text-[13px]">
-          <caption className="sr-only">날짜별 답변당 평균 실수 개수</caption>
+          <caption className="sr-only">날짜별 이미 지적받았던 실수의 비율</caption>
           <thead>
             <tr className="text-left text-faint">
               <th className="pb-2 font-normal">날짜</th>
-              <th className="pb-2 text-right font-normal">평균 실수</th>
+              <th className="pb-2 text-right font-normal">반복 비율</th>
             </tr>
           </thead>
           <tbody className="text-muted">
@@ -196,7 +202,7 @@ function MistakeTrend({ trend }: { trend: { date: string; avg: number }[] }) {
               <tr key={i} className="border-t border-hair">
                 <td className="py-1.5 tabular-nums">{t.date}</td>
                 <td className="py-1.5 text-right tabular-nums">
-                  {t.avg.toFixed(1)}
+                  {Math.round(t.rate)}%
                 </td>
               </tr>
             ))}
@@ -208,7 +214,7 @@ function MistakeTrend({ trend }: { trend: { date: string; avg: number }[] }) {
             viewBox={`0 0 ${W} ${H}`}
             className="w-full"
             role="img"
-            aria-label={`최근 ${trend.length}회 답변당 평균 실수 추이. ${first.avg.toFixed(1)}개에서 ${last.avg.toFixed(1)}개.`}
+            aria-label={`최근 ${trend.length}회 반복 실수 비율 추이. ${Math.round(first.rate)}%에서 ${Math.round(last.rate)}%.`}
             onMouseLeave={() => setHover(null)}
           >
             <line
@@ -229,7 +235,7 @@ function MistakeTrend({ trend }: { trend: { date: string; avg: number }[] }) {
             />
             <circle
               cx={x(active)}
-              cy={y(trend[active].avg)}
+              cy={y(trend[active].rate)}
               r={4}
               fill={LINE}
               stroke="var(--color-card)"
@@ -250,7 +256,7 @@ function MistakeTrend({ trend }: { trend: { date: string; avg: number }[] }) {
           <figcaption className="mt-2 flex items-baseline justify-between text-[12px] tabular-nums text-faint">
             <span>{first.date}</span>
             <span className="text-muted">
-              {trend[active].date} · {trend[active].avg.toFixed(1)}개
+              {trend[active].date} · {Math.round(trend[active].rate)}%
             </span>
             <span>{last.date}</span>
           </figcaption>
