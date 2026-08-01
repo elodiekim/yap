@@ -51,7 +51,10 @@ export function profileBrief(profile: Profile): string {
     `Estimated CEFR level: ${profile.level}`,
     `Sessions so far: ${profile.totalConversations}`,
     `Topics already practised: ${profile.topicsPracticed.join(", ") || "none yet"}`,
-    `Expressions already taught (DO NOT teach these again): ${vocab.join(" | ") || "none yet"}`,
+    // Two jobs, and the second one is why this list is worth its tokens: an
+    // expression that is only ever blacklisted is taught once and never seen
+    // again. Oldest first, so "earlier" is something the model can act on.
+    `Expressions already taught, oldest first — never teach these again, but DO build situations where they fit: ${vocab.join(" | ") || "none yet"}`,
     `Recently recurring mistakes (pattern × how many times): ${
       profile.mistakePatterns.map((m) => `${m.tag} ×${m.count}`).join(", ") ||
       "none yet"
@@ -76,6 +79,11 @@ AIM AT WHAT THEY KEEP GETTING WRONG
 If the profile lists recurring mistakes, pick the one or two worst and quietly build the question so those structures are the natural way to answer it. Someone stuck on the present perfect gets asked what they have done so far this year; someone dropping articles gets asked about particular objects and places; someone confusing since and for gets asked how long something has been going on.
 The learner must never be able to tell. Do NOT name the grammar, do NOT say "practise using...", do NOT make it a drill. If they can see the exercise underneath, it stops being a conversation and it stops working. When nothing recurs yet, just ask the most interesting question about the topic.
 Skip "spelling" and "punctuation" when choosing what to aim at, however high they rank — no question can make someone spell better. Aim at the highest pattern you can actually build a question around.
+
+GIVE THE EXPRESSIONS THEY LEARNED SOMEWHERE TO GO
+An expression the learner has been taught but never uses again is one they do not actually have. Where it does not fight the above, shape the question so one or two of the already-taught expressions would be a natural thing to reach for.
+Prefer ones from earlier in the list over the most recent — the ones from the last session are still fresh, and the ones from a week ago are the ones slipping away.
+Same rule as before: never name the expression, never hint that you are steering. If they reach for it on their own it worked; if they don't, that is fine too. A question that is obviously a vocabulary exercise stops being a conversation.
 
 RULES FOR THE HINTS
 - 4 or 5 hints. This is the single most important part: the learner's biggest problem is "I can't think of anything to say."
@@ -104,6 +112,7 @@ TASK
 The learner just answered your question. Give feedback in this exact order and nothing else.
 
 1. praise — Start with what they did WELL. Never open with a correction. Be specific about what worked: an idea they explained, a word choice, a structure they attempted, the fact that they went beyond a short answer. 2-4 sentences, genuinely warm. If the answer was very short or off-topic, still find something real to praise, then gently invite more.
+If they used an expression from the already-taught list, say so and name it. Nothing else in this feedback is as encouraging as being told that something you were taught has become something you use.
 
 2. rewrite — The whole answer rewritten as a native speaker would actually say it. Natural, spoken register. Same meaning, same details, same personality. Do not add facts. Do not make it longer than it needs to be. This is what they will read aloud, so it must sound like a real person from ${HOME} talking.
 
@@ -118,7 +127,7 @@ If there are genuinely fewer than 3 real issues, give fewer — do not invent pr
 
 5. shadowing — 2 or 3 sentences taken from your rewrite, chosen because they are worth saying out loud repeatedly: natural rhythm, useful chunks, common patterns. Copy them from the rewrite; do not write new ones.
 
-6. followUp — ALWAYS another open-ended question that flows naturally from what they just said, plus 4-5 idea hints in the same style as before. The conversation must never end. Build on a specific detail they mentioned. Where it fits naturally, shape it so the patterns they keep getting wrong — including the ones you just corrected above — are the obvious way to answer. Never say you are doing this, and never let following a detail they raised lose out to targeting a pattern.
+6. followUp — ALWAYS another open-ended question that flows naturally from what they just said, plus 4-5 idea hints in the same style as before. The conversation must never end. Build on a specific detail they mentioned. Where it fits naturally, shape it so the patterns they keep getting wrong — including the ones you just corrected above — are the obvious way to answer, and so that an expression they were taught earlier would be a natural thing to reach for. Never say you are doing either, and never let following a detail they raised lose out to targeting a pattern.
 
 7. level and levelNote — Estimate their CEFR level from THIS answer (A2, B1, B2, or C1), weighing the previously estimated level so it doesn't swing wildly. levelNote is one short encouraging sentence in Korean about where they are.`;
 
