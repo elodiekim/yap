@@ -65,7 +65,7 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
   const [grading, setGrading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const liveRef = useRef<HTMLDivElement>(null);
+  const lastTurnRef = useRef<HTMLDivElement>(null);
 
   // Session is remounted (key={topic}) whenever the topic changes, so this
   // effect runs exactly once — the loading state is set in useState above
@@ -150,9 +150,11 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
     }
   }
 
+  // Land on the feedback that was just written, not the next question —
+  // jumping straight to the live prompt skipped past it entirely.
   useEffect(() => {
     if (turns.length > 0) {
-      liveRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      lastTurnRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [turns.length]);
 
@@ -173,14 +175,18 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
       </div>
 
       {turns.map((turn, i) => (
-        <div key={turn.id} className="mb-14 space-y-3">
+        <div
+          key={turn.id}
+          ref={i === turns.length - 1 ? lastTurnRef : undefined}
+          className="mb-14 space-y-3 scroll-mt-6"
+        >
           <AskedQuestion question={turn.question} index={i + 1} />
           <YourAnswer text={turn.answer} words={turn.words} />
           {turn.feedback ? <FeedbackView feedback={turn.feedback} /> : null}
         </div>
       ))}
 
-      <div ref={liveRef} className="scroll-mt-6">
+      <div>
         {loadingPrompt ? (
           <Card className="p-5">
             <Thinking label="질문을 만들고 있어요…" />
@@ -256,6 +262,7 @@ function HintCard({ hints }: { hints: string[] }) {
     <Card tone="bg-accent-soft" className="border-accent-line p-4">
       <button
         onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
         className="flex w-full items-baseline justify-between gap-2 text-left"
       >
         <SectionLabel en="Need ideas?" ko="할 말이 안 떠오르면" />
@@ -263,8 +270,18 @@ function HintCard({ hints }: { hints: string[] }) {
           {open ? "접기" : "펼치기"}
         </span>
       </button>
-      {open ? (
-        <>
+      {/*
+        Collapsing with grid rows keeps the hints in the DOM so the height can
+        animate, which also keeps them in the accessibility tree — hide them
+        explicitly or a screen reader reads out a panel that looks shut.
+      */}
+      <div
+        aria-hidden={!open}
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
           <ul className="mt-3 flex flex-wrap gap-1.5">
             {hints.map((h, i) => (
               <li
@@ -279,8 +296,8 @@ function HintCard({ hints }: { hints: string[] }) {
           <p className="ko mt-3 text-[13px] text-muted">
             이 중 하나만 골라서 이야기를 시작해도 충분해요.
           </p>
-        </>
-      ) : null}
+        </div>
+      </div>
     </Card>
   );
 }

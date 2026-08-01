@@ -16,6 +16,40 @@ import {
   type Badge,
 } from "@/lib/store";
 
+function BadgeStack({ badges, onDone }: { badges: Badge[]; onDone: () => void }) {
+  const [leaving, setLeaving] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLeaving(true), 5000);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (!leaving) return;
+    const t = setTimeout(onDone, 220);
+    return () => clearTimeout(t);
+  }, [leaving, onDone]);
+
+  return (
+    <>
+      {badges.map((b) => (
+        <div
+          key={b.id}
+          className={`${leaving ? "animate-rise-out" : "animate-rise"} flex items-center gap-2.5 rounded-lg border border-hair bg-card px-4 py-2.5 shadow-raised`}
+        >
+          <span aria-hidden className="text-[15px]">
+            {b.emoji}
+          </span>
+          <p className="ko text-[14px] text-ink">
+            <span className="text-muted">달성 · </span>
+            {b.label}
+          </p>
+        </div>
+      ))}
+    </>
+  );
+}
+
 function NavLink({
   active,
   onClick,
@@ -48,6 +82,7 @@ export default function Page() {
   const [view, setView] = useState<"home" | "history" | "expressions">("home");
   const [openSession, setOpenSession] = useState<number | null>(null);
   const [badges, setBadges] = useState<Badge[]>([]);
+  const [badgeBatch, setBadgeBatch] = useState(0);
 
   function goHome() {
     setTopic(null);
@@ -67,12 +102,6 @@ export default function Page() {
   useEffect(() => {
     void initProfile();
   }, []);
-
-  useEffect(() => {
-    if (badges.length === 0) return;
-    const t = setTimeout(() => setBadges([]), 5000);
-    return () => clearTimeout(t);
-  }, [badges]);
 
   return (
     <main className="min-h-dvh">
@@ -109,7 +138,10 @@ export default function Page() {
           key={`${mode}:${topic}`}
           topic={topic}
           mode={mode}
-          onBadges={setBadges}
+          onBadges={(b) => {
+            setBadges(b);
+            setBadgeBatch((n) => n + 1);
+          }}
           onExit={goHome}
         />
       ) : view === "history" ? (
@@ -146,24 +178,22 @@ export default function Page() {
         />
       )}
 
+      {/*
+        The live region stays mounted and empty between badges. Screen readers
+        announce changes *inside* an existing region — creating the region with
+        its content already in place is routinely missed.
+      */}
       <div
         aria-live="polite"
         className="pointer-events-none fixed inset-x-0 bottom-6 z-30 flex flex-col items-center gap-2 px-4"
       >
-        {badges.map((b) => (
-          <div
-            key={b.id}
-            className="animate-rise flex items-center gap-2.5 rounded-lg border border-hair bg-card px-4 py-2.5 shadow-raised"
-          >
-            <span aria-hidden className="text-[15px]">
-              {b.emoji}
-            </span>
-            <p className="ko text-[14px] text-ink">
-              <span className="text-muted">달성 · </span>
-              {b.label}
-            </p>
-          </div>
-        ))}
+        {badges.length > 0 ? (
+          <BadgeStack
+            key={badgeBatch}
+            badges={badges}
+            onDone={() => setBadges([])}
+          />
+        ) : null}
       </div>
     </main>
   );
