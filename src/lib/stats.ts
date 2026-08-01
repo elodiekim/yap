@@ -26,21 +26,71 @@ export function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
-/** Consecutive days ending today (or yesterday, if today isn't done yet). */
-export function streak(days: string[]): number {
-  if (days.length === 0) return 0;
+/** How many rest days a 30-day span may absorb before the chain breaks. */
+const RESTS_PER_MONTH = 2;
+const REST_WINDOW = 30;
+
+function daysBetween(a: string, b: string): number {
+  const ms =
+    new Date(`${a}T00:00:00`).getTime() - new Date(`${b}T00:00:00`).getTime();
+  return Math.round(ms / 86_400_000);
+}
+
+export interface Streak {
+  /** Days practised in the current chain. Rest days are not counted. */
+  days: number;
+  /** Missed days the chain absorbed — shown so the number isn't a lie. */
+  rests: number;
+}
+
+/**
+ * The chain, ending today (or yesterday, if today isn't done yet).
+ *
+ * A single missed day is bridged rather than fatal: the common failure is one
+ * late night or one bad cold, and losing a month over it is what stops people
+ * coming back at all. Two missed days in a row is a real gap and does break it.
+ *
+ * Bridges are capped at two per 30-day span so the chain cannot quietly become
+ * an every-other-day habit while still calling itself a daily streak. Nothing
+ * is stored — this is derived from the practised dates each time.
+ */
+export function streakInfo(days: string[]): Streak {
+  if (days.length === 0) return { days: 0, rests: 0 };
+
   const set = new Set(days);
   let cursor = today();
   if (!set.has(cursor)) {
     cursor = dayBefore(cursor);
-    if (!set.has(cursor)) return 0;
+    // Missing both today and yesterday is already two days: nothing to bridge.
+    if (!set.has(cursor)) return { days: 0, rests: 0 };
   }
-  let n = 0;
-  while (set.has(cursor)) {
-    n += 1;
-    cursor = dayBefore(cursor);
+
+  let counted = 0;
+  const rests: string[] = [];
+
+  for (;;) {
+    if (set.has(cursor)) {
+      counted += 1;
+      cursor = dayBefore(cursor);
+      continue;
+    }
+
+    // A gap. It can only be bridged if it is exactly one day long, the day
+    // before it was practised, and this 30-day span has rests left.
+    const before = dayBefore(cursor);
+    const spent = rests.filter((r) => daysBetween(r, cursor) < REST_WINDOW);
+    if (!set.has(before) || spent.length >= RESTS_PER_MONTH) break;
+
+    rests.push(cursor);
+    cursor = before;
   }
-  return n;
+
+  return { days: counted, rests: rests.length };
+}
+
+/** Just the number, for the places that only show the chain. */
+export function streak(days: string[]): number {
+  return streakInfo(days).days;
 }
 
 export function wordsToday(profile: Profile): number {

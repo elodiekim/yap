@@ -6,6 +6,7 @@ export {
   countWords,
   recurrenceTrend,
   streak,
+  streakInfo,
   today,
   wordsToday,
   type Badge,
