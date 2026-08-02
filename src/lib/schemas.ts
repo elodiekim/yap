@@ -18,6 +18,13 @@ export const PROMPT_SCHEMA = {
   additionalProperties: false,
 } as Record<string, unknown>;
 
+export const OPENER_SCHEMA = {
+  type: "object",
+  properties: { english: { type: "string" } },
+  required: ["english"],
+  additionalProperties: false,
+} as Record<string, unknown>;
+
 /**
  * How much feedback each mode asks for.
  *

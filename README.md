@@ -36,6 +36,11 @@ npm run dev
 
 **3. 3~10문장을 씁니다** (`⌘↵` 로 제출)
 
+그래도 막히면 문이 두 개 더 있습니다. 힌트를 봐도 안 떠오르면 **더 쉬운 질문으로** 바꿀 수 있고,
+할 말은 떠올랐는데 영어로 시작이 안 되면 한국어로 적어두고 **첫 문장만** 영어로 받아올 수 있습니다
+(전체 번역은 하지 않습니다 — 나머지를 쓰는 게 연습이니까요).
+여력이 없는 날은 홈에서 **가볍게 한 문장**으로 시작해도 연속 학습일은 그대로 이어집니다.
+
 **4. 피드백이 정해진 순서로 옵니다**
 
 | | | |
@@ -229,14 +234,16 @@ NEXT_PUBLIC_ENGLISH_VARIANT=anz  # 쉐도잉 음성 선택용
 src/
   app/
     page.tsx                    앱 셸 (홈 ↔ 세션 ↔ 지난 연습 ↔ 표현, 트로피 토스트)
-    api/question/route.ts       토픽 → 질문 + 힌트
+    api/question/route.ts       토픽 → 질문 + 힌트 (더 쉬운 질문으로 교체도 여기)
     api/coach/route.ts          답변 → 6단계 피드백 + 저장 + 트로피 판정
+    api/opener/route.ts         한국어 초안 → 영어 첫 문장 한 개
     api/sessions/route.ts       날짜별 목록          api/sessions/[id]  세션 전문
     api/expressions/route.ts    배운 표현 목록       api/profile        레벨·통계
     api/usage/route.ts          요청 수 · 토큰 · 예상 비용
   components/
     Home.tsx                    히어로 + 토픽 그리드 + 대시보드 + 사용량
-    Session.tsx                 질문 / 작성 / 피드백 루프
+    Session.tsx                 질문 / 작성 / 피드백 루프 + 막혔을 때의 두 개의 문
+    About.tsx                   "나에 대해" — 질문을 내 얘기로 만드는 재료
     FeedbackView.tsx            피드백 6단계 카드 (세션과 지난 연습이 함께 씀)
     History.tsx                 지난 연습 목록과 상세
     Expressions.tsx             배운 표현 모아보기

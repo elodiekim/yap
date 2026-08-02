@@ -32,32 +32,45 @@ interface CoachResponse {
  */
 const inFlight = new Map<string, Promise<Prompt>>();
 
-function askQuestion(topic: string, mode: Mode): Promise<Prompt> {
-  const key = `${mode}:${topic}`;
-  const existing = inFlight.get(key);
-  if (existing) return existing;
-
-  const request = fetch("/api/question", {
+function requestQuestion(
+  topic: string,
+  mode: Mode,
+  avoid?: string,
+): Promise<Prompt> {
+  return fetch("/api/question", {
     method: "POST",
     headers: { "content-type": "application/json" },
     // The route reads the learner's history from the database itself.
-    body: JSON.stringify({ topic, mode, practisedOn: today() }),
+    body: JSON.stringify({ topic, mode, avoid, practisedOn: today() }),
   }).then(async (r) => {
     const data = await r.json();
     if (!r.ok) throw new Error(data.error ?? "Couldn't get a question.");
     return data as Prompt;
   });
+}
 
+function askQuestion(topic: string, mode: Mode): Promise<Prompt> {
+  const key = `${mode}:${topic}`;
+  const existing = inFlight.get(key);
+  if (existing) return existing;
+
+  const request = requestQuestion(topic, mode);
   inFlight.set(key, request);
   // Settle-only cleanup; the caller owns the rejection, so swallow it here.
   request.catch(() => {}).finally(() => inFlight.delete(key));
   return request;
 }
 
+/** Where the Korean starts, or -1. Everything before it is already written. */
+function hangulStart(text: string): number {
+  return text.search(/[가-힣]/);
+}
+
+function hangulCount(text: string): number {
+  return text.match(/[가-힣]/g)?.length ?? 0;
+}
+
 export function Session({ topic, mode, onBadges, onExit }: Props) {
-  const easy = mode === "easy";
-  // The floor is what made the app contradict its own slogan on tired days.
-  const floor = easy ? 3 : 8;
   const [turns, setTurns] = useState<Turn[]>([]);
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [draft, setDraft] = useState("");
@@ -65,7 +78,24 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
   const [grading, setGrading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  /**
+   * Asking for an easier question is the same admission as choosing the light
+   * way in from home, so it lands in the same mode — and it stays there for the
+   * rest of the session, because every follow-up from here is a small question
+   * and grading a small question at the full bar is the trap §5.6 removed.
+   */
+  const [turnMode, setTurnMode] = useState<Mode>(mode);
+  const [swapping, setSwapping] = useState(false);
+  const [swapped, setSwapped] = useState(false);
+  /** Korean set aside when the opener replaced it, kept visible to finish from. */
+  const [korean, setKorean] = useState<string | null>(null);
+  const [opening, setOpening] = useState(false);
   const lastTurnRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const easy = turnMode === "easy";
+  // The floor is what made the app contradict its own slogan on tired days.
+  const floor = easy ? 3 : 8;
 
   // Session is remounted (key={topic}) whenever the topic changes, so this
   // effect runs exactly once — the loading state is set in useState above
@@ -99,8 +129,84 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
     setAttempt((n) => n + 1);
   }
 
+  /**
+   * The first wall (§5.8): the hints did not land either. Trading the question
+   * in costs a request, which is worth it — the alternative the learner reaches
+   * for at this exact moment is closing the tab, and that costs the streak.
+   */
+  async function lighten() {
+    if (!prompt || swapping) return;
+    setSwapping(true);
+    setError(null);
+    try {
+      const next = await requestQuestion(topic, "easy", prompt.question);
+      setPrompt(next);
+      setTurnMode("easy");
+      setSwapped(true);
+      setKorean(null);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSwapping(false);
+    }
+  }
+
+  /**
+   * The second wall: they know what to say, in Korean, and the English will not
+   * start. One sentence back, never the whole answer — a translated answer is
+   * not practice, and the rest of the paragraph is the part they came here for.
+   */
+  async function openInEnglish() {
+    if (!prompt || opening) return;
+    setOpening(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/opener", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          question: prompt.question,
+          draft,
+          practisedOn: today(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Couldn't start it for you.");
+
+      // Anything before the first Hangul is English they already wrote; the
+      // sentence continues from there, and the Korean is set aside, not lost.
+      const cut = hangulStart(draft);
+      const written = cut > 0 ? draft.slice(0, cut).trimEnd() : "";
+      const english = (data.english as string).trim();
+      setKorean(draft.slice(cut < 0 ? 0 : cut).trim());
+      setDraft(written ? `${written} ${english} ` : `${english} `);
+      requestAnimationFrame(() => {
+        const el = inputRef.current;
+        if (!el) return;
+        el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
+      });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setOpening(false);
+    }
+  }
+
   const words = countWords(draft);
-  const canSubmit = words >= floor && !grading && !!prompt;
+  const hangul = hangulCount(draft);
+  const solid = draft.replace(/\s/g, "").length;
+  // Enough Korean to be worth translating — including a stall halfway through
+  // a sentence they started in English.
+  const offerOpener = hangul >= 4 && !grading;
+  // Mostly Korean is not an answer yet, whatever the word count says. Only
+  // "mostly", so that one Korean word inside an English sentence never locks
+  // the button — being stuck at the door is the thing this screen exists to fix.
+  const stillKorean = solid > 0 && hangul / solid > 0.5;
+  const canSubmit = words >= floor && !stillKorean && !grading && !!prompt;
+  // Only while the box is empty: someone with a draft is not stuck, and this
+  // way trading the question in can never throw away something they wrote.
+  const offerSwap = !swapped && solid === 0;
 
   async function submit() {
     if (!prompt || !canSubmit) return;
@@ -117,7 +223,7 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
           question: prompt.question,
           answer,
           history: turns.map((t) => ({ question: t.question, answer: t.answer })),
-          mode,
+          mode: turnMode,
           // The server is on UTC; the streak counts the learner's calendar day.
           practisedOn: today(),
         }),
@@ -138,6 +244,8 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
       };
       setTurns((prev) => [...prev, turn]);
       setDraft("");
+      setKorean(null);
+      setSwapped(false); // a new question gets its own way out
       setPrompt(feedback.followUp);
 
       // The route already wrote the session; this only mirrors the result.
@@ -199,7 +307,14 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
               live
             />
             <HintCard hints={prompt.hints} />
+            {offerSwap ? (
+              <WayOut onSwap={lighten} busy={swapping} easy={easy} />
+            ) : null}
+            {korean ? (
+              <KoreanAside text={korean} onClose={() => setKorean(null)} />
+            ) : null}
             <Composer
+              inputRef={inputRef}
               value={draft}
               onChange={setDraft}
               onSubmit={submit}
@@ -208,6 +323,10 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
               canSubmit={canSubmit}
               floor={floor}
               easy={easy}
+              stillKorean={stillKorean}
+              offerOpener={offerOpener}
+              opening={opening}
+              onOpener={openInEnglish}
             />
           </div>
         ) : null}
@@ -302,6 +421,61 @@ function HintCard({ hints }: { hints: string[] }) {
   );
 }
 
+/**
+ * Kept deliberately plain and set below the hints — this is the door you find
+ * after the hints failed, not a second button competing with them.
+ */
+function WayOut({
+  onSwap,
+  busy,
+  easy,
+}: {
+  onSwap: () => void;
+  busy: boolean;
+  easy: boolean;
+}) {
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-1">
+      <p className="ko text-[13px] text-muted">
+        힌트를 봐도 안 떠오르나요?
+      </p>
+      {busy ? (
+        <Thinking label="다른 질문을 찾는 중이에요…" />
+      ) : (
+        <button
+          onClick={onSwap}
+          className="ko rounded-md text-[13px] text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          {easy ? "다른 질문으로 →" : "더 쉬운 질문으로 →"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** What they wrote in Korean, parked where they can finish translating it. */
+function KoreanAside({ text, onClose }: { text: string; onClose: () => void }) {
+  return (
+    <Card tone="bg-sunk" className="animate-rise p-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <SectionLabel en="What you meant" ko="내가 쓰려던 말" />
+        <button
+          onClick={onClose}
+          className="ko shrink-0 text-[13px] text-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        >
+          닫기
+        </button>
+      </div>
+      <p className="ko mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-body">
+        {text}
+      </p>
+      <p className="ko mt-2.5 text-[13px] text-muted">
+        첫 문장은 넣어뒀어요. 나머지는 여기 보면서 이어서 써보세요.
+      </p>
+    </Card>
+  );
+}
+
 function YourAnswer({ text, words }: { text: string; words: number }) {
   return (
     <Card tone="bg-sunk" className="p-4">
@@ -319,6 +493,7 @@ function YourAnswer({ text, words }: { text: string; words: number }) {
 }
 
 function Composer({
+  inputRef,
   value,
   onChange,
   onSubmit,
@@ -327,7 +502,12 @@ function Composer({
   canSubmit,
   floor,
   easy,
+  stillKorean,
+  offerOpener,
+  opening,
+  onOpener,
 }: {
+  inputRef: React.RefObject<HTMLTextAreaElement | null>;
   value: string;
   onChange: (v: string) => void;
   onSubmit: () => void;
@@ -336,10 +516,15 @@ function Composer({
   canSubmit: boolean;
   floor: number;
   easy: boolean;
+  stillKorean: boolean;
+  offerOpener: boolean;
+  opening: boolean;
+  onOpener: () => void;
 }) {
   return (
     <Card className="p-4">
       <textarea
+        ref={inputRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
@@ -354,9 +539,33 @@ function Composer({
         }
         className="w-full resize-y rounded-lg bg-transparent text-[16px] leading-[1.85] text-ink outline-none placeholder:text-faint disabled:opacity-60"
       />
+      {/*
+        The other half of "생각이 안 나요": they thought of it, in Korean, and
+        the English will not start. One sentence is a push off the wall; a whole
+        translation would take the practice away.
+      */}
+      {offerOpener ? (
+        <div className="animate-fade mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-accent-line bg-accent-soft px-3 py-2.5">
+          <p className="ko text-[13px] text-body">
+            한국어로 쓰셨네요. 첫 문장만 영어로 만들어 드릴게요.
+          </p>
+          {opening ? (
+            <Thinking label="첫 문장을 옮기는 중이에요…" />
+          ) : (
+            <button
+              onClick={onOpener}
+              className="ko shrink-0 rounded-md text-[13px] font-medium text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              첫 문장 만들기 →
+            </button>
+          )}
+        </div>
+      ) : null}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-hair pt-3">
         <p className="ko text-[13px] text-muted">
-          {words < floor ? (
+          {stillKorean ? (
+            <>영어로 옮기고 나면 제출할 수 있어요</>
+          ) : words < floor ? (
             <>{floor - words}단어만 더 쓰면 제출할 수 있어요</>
           ) : easy ? (
             <>

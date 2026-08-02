@@ -69,7 +69,7 @@ create table if not exists badges (
 create table if not exists usage_log (
   id             integer primary key autoincrement,
   day            text not null,      -- learner's local date
-  kind           text not null,      -- 'question' | 'coach'
+  kind           text not null,      -- 'question' | 'coach' | 'opener'
   model          text not null,
   input_tokens   integer not null default 0,
   output_tokens  integer not null default 0,

@@ -374,7 +374,7 @@ export function listExpressions(): ExpressionEntry[] {
 
 export function logUsage(
   day: string,
-  kind: "question" | "coach",
+  kind: "question" | "coach" | "opener",
   usage: Usage,
 ): void {
   db()

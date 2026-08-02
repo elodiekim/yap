@@ -20,6 +20,8 @@ export async function POST(req: Request) {
       topic?: string;
       practisedOn?: string;
       mode?: Mode;
+      /** The question being walked away from — it is not in the DB yet. */
+      avoid?: string;
     };
     const topic = body.topic;
     const easy = body.mode === "easy";
@@ -30,6 +32,7 @@ export async function POST(req: Request) {
     // The learner's history comes from the database, not the request body.
     const profile = readProfile();
     const pastQuestions = recentQuestions(topic);
+    if (body.avoid?.trim()) pastQuestions.push(body.avoid.trim());
 
     const userParts = [
       `Topic: ${topicLabel(topic)}`,
@@ -42,6 +45,12 @@ export async function POST(req: Request) {
         "",
         "Questions already asked on this topic, oldest first:",
         ...pastQuestions.map((q) => `- ${q}`),
+      );
+    }
+    if (body.avoid?.trim()) {
+      userParts.push(
+        "",
+        "They read the last question in that list and could not think of anything to say, so they asked for a different one. Do not rescue it with a rephrasing — ask about something else on this topic, smaller and more concrete.",
       );
     }
     userParts.push(
