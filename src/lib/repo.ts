@@ -29,8 +29,10 @@ export function readProfile(): Profile {
   const conn = db();
 
   const meta = conn
-    .prepare("select level, updated_at from profile where id = 1")
-    .get() as { level: Level; updated_at: string } | undefined;
+    .prepare("select level, about, updated_at from profile where id = 1")
+    .get() as
+    | { level: Level; about: string; updated_at: string }
+    | undefined;
 
   const vocab = (
     conn
@@ -133,6 +135,7 @@ export function readProfile(): Profile {
 
   return {
     level: meta?.level ?? EMPTY_PROFILE.level,
+    about: meta?.about ?? "",
     vocab,
     mistakePatterns: mistakePatterns.map((r) => ({
       tag: r.tag,
@@ -447,6 +450,23 @@ export function readUsage(days = 30): {
 
   const models = [...new Set(rows.map((r) => r.model))];
   return { daily, models };
+}
+
+/**
+ * Replace the learner's note about themselves.
+ *
+ * Capped because it rides along in every prompt — a couple of lines is what
+ * makes questions specific, and a life story would just cost tokens.
+ */
+export const ABOUT_MAX = 400;
+
+export function saveAbout(text: string): Profile {
+  db()
+    .prepare(
+      "update profile set about = ?, updated_at = datetime('now') where id = 1",
+    )
+    .run(text.trim().slice(0, ABOUT_MAX));
+  return readProfile();
 }
 
 export function isEmpty(): boolean {

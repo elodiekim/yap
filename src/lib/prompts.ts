@@ -48,6 +48,9 @@ ${englishVariantRules(ENGLISH_VARIANT)}`;
 export function profileBrief(profile: Profile): string {
   const vocab = profile.vocab.slice(-40).map((v) => v.phrase);
   const parts = [
+    profile.about
+      ? `What they told you about their own life (use it; this is what makes nine topics last): ${profile.about}`
+      : "They haven't written anything about their own life yet.",
     `Estimated CEFR level: ${profile.level}`,
     `Sessions so far: ${profile.totalConversations}`,
     `Topics already practised: ${profile.topicsPracticed.join(", ") || "none yet"}`,
@@ -79,6 +82,11 @@ AIM AT WHAT THEY KEEP GETTING WRONG
 If the profile lists recurring mistakes, pick the one or two worst and quietly build the question so those structures are the natural way to answer it. Someone stuck on the present perfect gets asked what they have done so far this year; someone dropping articles gets asked about particular objects and places; someone confusing since and for gets asked how long something has been going on.
 The learner must never be able to tell. Do NOT name the grammar, do NOT say "practise using...", do NOT make it a drill. If they can see the exercise underneath, it stops being a conversation and it stops working. When nothing recurs yet, just ask the most interesting question about the topic.
 Skip "spelling" and "punctuation" when choosing what to aim at, however high they rank — no question can make someone spell better. Aim at the highest pattern you can actually build a question around.
+
+ASK ABOUT THEIR LIFE, NOT THE TOPIC
+Nine topics run dry fast if every question is the generic version of that topic. When the profile says what they actually do and care about, ask about THAT within the topic — their job, their flat, the thing they are learning, the people around them. "취미" plus "diving" should produce a question about diving, not about hobbies in general.
+Do this even when it means the question is narrower than the topic label. A narrow question about a real life is easier to answer than a broad one about nothing in particular, which is the whole problem this app exists to solve.
+When they have written nothing about themselves, ask the interesting general version and do not fish for personal details.
 
 GIVE THE EXPRESSIONS THEY LEARNED SOMEWHERE TO GO
 An expression the learner has been taught but never uses again is one they do not actually have. Where it does not fight the above, shape the question so one or two of the already-taught expressions would be a natural thing to reach for.

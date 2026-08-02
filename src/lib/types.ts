@@ -116,9 +116,10 @@ export interface UsageReport {
 /** Everything Yap remembers about the learner. */
 export interface Profile {
   level: Level;
+  /** Free text the learner wrote about themselves; "" when unset. */
+  about: string;
   /** Expressions already taught — never teach the same one twice. */
   vocab: Expression[];
-  /** Short tags for recurring mistakes, e.g. "article-omission". */
   /** Recently recurring error patterns, most frequent first. */
   mistakePatterns: MistakePattern[];
   topicsPracticed: string[];
@@ -141,6 +142,7 @@ export interface Profile {
 
 export const EMPTY_PROFILE: Profile = {
   level: "B1",
+  about: "",
   vocab: [],
   mistakePatterns: [],
   topicsPracticed: [],

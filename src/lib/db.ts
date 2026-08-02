@@ -16,6 +16,9 @@ create table if not exists profile (
   id               integer primary key check (id = 1),
   level            text not null default 'B1' check (level in ('A2','B1','B2','C1')),
   english_variant  text not null default 'anz',
+  -- A couple of lines about the learner's actual life, so nine topics can ask
+  -- more than nine questions. Free text, optional, theirs to write.
+  about            text not null default '',
   updated_at       text not null default (datetime('now'))
 );
 
@@ -109,6 +112,7 @@ function open(): DatabaseSync {
     "mode",
     "mode text not null default 'normal' check (mode in ('normal','easy'))",
   );
+  addColumnIfMissing(conn, "profile", "about", "about text not null default ''");
   conn.exec("insert or ignore into profile (id) values (1)");
   return conn;
 }

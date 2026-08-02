@@ -97,6 +97,16 @@ export async function initProfile(): Promise<void> {
   await fetchProfile();
 }
 
+export async function saveAbout(about: string): Promise<void> {
+  const res = await fetch("/api/profile", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ about }),
+  });
+  if (!res.ok) throw new Error("could not save");
+  setProfile((await res.json()) as Profile);
+}
+
 export async function resetProfile(): Promise<void> {
   const res = await fetch("/api/profile", { method: "DELETE" });
   if (res.ok) setProfile((await res.json()) as Profile);

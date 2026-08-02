@@ -3,6 +3,7 @@
 import { TOPICS } from "@/lib/topics";
 import type { Mode, Profile } from "@/lib/types";
 import { streak } from "@/lib/store";
+import { About } from "./About";
 import { Dashboard } from "./Dashboard";
 import { Usage } from "./Usage";
 import { Button, Card, Meta } from "./ui";
@@ -118,7 +119,10 @@ export function Home({
               </button>
             </div>
           </div>
-          <Dashboard profile={profile} />
+          <About value={profile.about} />
+          <div className="mt-3">
+            <Dashboard profile={profile} />
+          </div>
           <div className="mt-3">
             <Usage />
           </div>
@@ -129,12 +133,15 @@ export function Home({
           </div>
         </section>
       ) : (
-        <Card className="mt-16 animate-rise p-5 [animation-delay:120ms]">
-          <p className="ko text-[14px] leading-relaxed text-muted">
-            연속 학습일, 배운 표현, 실수 추이, 레벨은 첫 답변을 마치면 여기에
-            나타납니다. 모든 기록은 이 브라우저에만 저장되고 계정은 필요 없어요.
-          </p>
-        </Card>
+        <section className="mt-16 animate-rise space-y-3 [animation-delay:120ms]">
+          <About value={profile.about} />
+          <Card className="p-5">
+            <p className="ko text-[14px] leading-relaxed text-muted">
+              연속 학습일, 배운 표현, 실수 추이, 레벨은 첫 답변을 마치면 여기에
+              나타납니다. 기록은 이 노트북에만 저장되고 계정은 필요 없어요.
+            </p>
+          </Card>
+        </section>
       )}
     </div>
   );
