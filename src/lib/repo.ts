@@ -1,6 +1,6 @@
 import { db, snapshot, tx } from "./db";
 import type { Usage } from "./llm";
-import { costOf } from "./pricing";
+import { costOf, dailyRequestLimit } from "./pricing";
 import { newBadges, type Badge } from "./stats";
 import {
   EMPTY_PROFILE,
@@ -9,6 +9,7 @@ import {
   type Feedback,
   type Level,
   type Mode,
+  type PendingAnswer,
   type Profile,
   type SessionDetail,
   type SessionSummary,
@@ -164,91 +165,231 @@ export interface SessionInput {
   feedback: Feedback;
 }
 
-export function saveSession(input: SessionInput): {
-  profile: Profile;
-  badges: Badge[];
-} {
-  const { feedback } = input;
-  const before = readProfile();
-
-  const after = tx(() => {
-    const conn = db();
-    // An easy session records no level at all. A tired one-liner is not
-    // evidence about anyone's English, and letting it demote the learner would
-    // punish exactly the day this mode exists to make painless (§5.6).
-    const easy = input.mode === "easy";
-    const inserted = conn
-      .prepare(
-        `insert into sessions
-           (practised_on, topic, question, answer, word_count, mistake_count, level, feedback, source, mode)
-         values (?, ?, ?, ?, ?, ?, ?, ?, 'live', ?)`,
-      )
-      .run(
-        input.practisedOn,
-        input.topic,
-        input.question,
-        input.answer,
-        input.words,
-        feedback.mistakes.length,
-        easy ? null : feedback.level,
-        JSON.stringify(feedback),
-        input.mode,
-      );
-    const sessionId = Number(inserted.lastInsertRowid);
-
-    const addMistake = conn.prepare(
-      `insert into mistakes (session_id, tag, original, better, reason)
-       values (?, ?, ?, ?, ?)`,
+/**
+ * Everything a piece of feedback leaves behind, written against a session row
+ * that already exists.
+ *
+ * Split out of saveSession because feedback can now arrive a day after the
+ * answer did (§5.9): the row is inserted the moment the learner writes, and
+ * this runs whenever the grading call finally succeeds.
+ */
+function recordFeedback(sessionId: number, feedback: Feedback, easy: boolean) {
+  const conn = db();
+  conn
+    .prepare(
+      "update sessions set mistake_count = ?, level = ?, feedback = ? where id = ?",
+    )
+    .run(
+      feedback.mistakes.length,
+      // An easy session records no level at all. A tired one-liner is not
+      // evidence about anyone's English, and letting it demote the learner
+      // would punish exactly the day this mode exists to make painless (§5.6).
+      easy ? null : feedback.level,
+      JSON.stringify(feedback),
+      sessionId,
     );
-    for (const m of feedback.mistakes) {
-      addMistake.run(sessionId, m.tag, m.original, m.better, m.reason);
-    }
 
-    // "insert or ignore" is where the unique index on lower(phrase) does its
-    // job: the same expression is never recorded as taught twice.
-    const addExpression = conn.prepare(
-      `insert or ignore into expressions (session_id, phrase, meaning, example)
-       values (?, ?, ?, ?)`,
-    );
-    for (const e of feedback.expressions) {
-      addExpression.run(sessionId, e.phrase, e.meaning, e.example);
-    }
-
-    if (!easy) {
-      conn
-        .prepare(
-          "update profile set level = ?, updated_at = datetime('now') where id = 1",
-        )
-        .run(feedback.level);
-    }
-
-    return readProfile();
-  });
-
-  const badges = newBadges(before, after, feedback);
-  if (badges.length > 0) {
-    const award = db().prepare(
-      "insert or ignore into badges (badge_id) values (?)",
-    );
-    for (const b of badges) award.run(b.id);
-    after.badges = [...after.badges, ...badges.map((b) => b.id)];
+  const addMistake = conn.prepare(
+    `insert into mistakes (session_id, tag, original, better, reason)
+     values (?, ?, ?, ?, ?)`,
+  );
+  for (const m of feedback.mistakes) {
+    addMistake.run(sessionId, m.tag, m.original, m.better, m.reason);
   }
 
-  // The practice is already safely committed, so a backup that fails — an
-  // unmounted drive, a full disk — must not turn into a failed session.
+  // "insert or ignore" is where the unique index on lower(phrase) does its
+  // job: the same expression is never recorded as taught twice.
+  const addExpression = conn.prepare(
+    `insert or ignore into expressions (session_id, phrase, meaning, example)
+     values (?, ?, ?, ?)`,
+  );
+  for (const e of feedback.expressions) {
+    addExpression.run(sessionId, e.phrase, e.meaning, e.example);
+  }
+
+  if (!easy) {
+    conn
+      .prepare(
+        "update profile set level = ?, updated_at = datetime('now') where id = 1",
+      )
+      .run(feedback.level);
+  }
+}
+
+function insertAnswer(input: Omit<SessionInput, "feedback">): number {
+  const inserted = db()
+    .prepare(
+      `insert into sessions
+         (practised_on, topic, question, answer, word_count, source, mode)
+       values (?, ?, ?, ?, ?, 'live', ?)`,
+    )
+    .run(
+      input.practisedOn,
+      input.topic,
+      input.question,
+      input.answer,
+      input.words,
+      input.mode,
+    );
+  return Number(inserted.lastInsertRowid);
+}
+
+/**
+ * Backup is best-effort: the practice is already committed, so an unmounted
+ * drive or a full disk must not turn into a failed session.
+ */
+function backUp(): void {
   try {
     snapshot();
   } catch (err) {
     console.error("[backup] snapshot failed, practice was still saved:", err);
   }
+}
 
+export function saveSession(input: SessionInput): {
+  sessionId: number;
+  profile: Profile;
+  badges: Badge[];
+} {
+  const before = readProfile();
+  let sessionId = 0;
+
+  const after = tx(() => {
+    sessionId = insertAnswer(input);
+    recordFeedback(sessionId, input.feedback, input.mode === "easy");
+    return readProfile();
+  });
+
+  const badges = award(before, after, input.feedback);
+  backUp();
+  return { sessionId, profile: after, badges };
+}
+
+/**
+ * The answer, with no feedback attached — because the grading call failed.
+ *
+ * The day counts from this row alone: streak, totals, topic and the text
+ * itself are all in place, and the feedback can be fetched later. Losing the
+ * answer was the real damage in a rate limit, not losing the feedback (§5.9).
+ */
+export function saveUngraded(input: Omit<SessionInput, "feedback">): {
+  sessionId: number;
+  profile: Profile;
+  badges: Badge[];
+} {
+  const before = readProfile();
+  let sessionId = 0;
+
+  const after = tx(() => {
+    sessionId = insertAnswer(input);
+    return readProfile();
+  });
+
+  const badges = award(before, after, null);
+  backUp();
+  return { sessionId, profile: after, badges };
+}
+
+/** Grade an answer that was saved earlier. Null if the id isn't waiting. */
+export function attachFeedback(
+  sessionId: number,
+  feedback: Feedback,
+): { profile: Profile; badges: Badge[] } | null {
+  const pending = readPending(sessionId);
+  if (!pending) return null;
+
+  const before = readProfile();
+  const after = tx(() => {
+    recordFeedback(sessionId, feedback, pending.mode === "easy");
+    return readProfile();
+  });
+
+  const badges = award(before, after, feedback);
+  backUp();
   return { profile: after, badges };
+}
+
+function award(before: Profile, after: Profile, feedback: Feedback | null) {
+  const badges = newBadges(before, after, feedback);
+  if (badges.length > 0) {
+    const give = db().prepare(
+      "insert or ignore into badges (badge_id) values (?)",
+    );
+    for (const b of badges) give.run(b.id);
+    after.badges = [...after.badges, ...badges.map((b) => b.id)];
+  }
+  return badges;
+}
+
+function readPending(id: number | null): PendingAnswer | null {
+  const row = db()
+    .prepare(
+      `select id, practised_on, topic, question, answer, word_count, mode
+       from sessions
+       where source = 'live' and feedback is null
+         and question is not null and answer is not null
+         and (? is null or id = ?)
+       order by id desc limit 1`,
+    )
+    .get(id, id) as unknown as
+    | {
+        id: number;
+        practised_on: string;
+        topic: string;
+        question: string;
+        answer: string;
+        word_count: number;
+        mode: Mode;
+      }
+    | undefined;
+  if (!row) return null;
+  return {
+    id: Number(row.id),
+    practisedOn: row.practised_on,
+    topic: row.topic,
+    question: row.question,
+    answer: row.answer,
+    words: Number(row.word_count),
+    mode: row.mode,
+  };
+}
+
+/** An answer still waiting on feedback: a given one, or the most recent. */
+export function pendingAnswer(id: number | null = null): PendingAnswer | null {
+  return readPending(id);
+}
+
+export function pendingCount(): number {
+  const row = db()
+    .prepare(
+      `select count(*) as n from sessions
+       where source = 'live' and feedback is null and answer is not null`,
+    )
+    .get() as { n: number };
+  return Number(row.n);
+}
+
+/**
+ * Whether our own log says today's free-tier requests are spent.
+ *
+ * Ground truth about what this app asked for, which beats guessing from a
+ * provider error string — but only as good as FREE_TIER_DAILY_REQUESTS, so
+ * "false" here means "not sure", never "there is quota left".
+ */
+export function dailyQuotaSpent(day: string): boolean {
+  const limit = dailyRequestLimit();
+  if (limit === null) return false;
+  const row = db()
+    .prepare("select count(*) as n from usage_log where day = ?")
+    .get(day) as { n: number };
+  return Number(row.n) >= limit;
 }
 
 export function listSessions(limit = 60, offset = 0): SessionSummary[] {
   const rows = db()
     .prepare(
       `select id, practised_on, topic, word_count, mistake_count, level, source,
+              feedback is not null as graded,
               substr(coalesce(answer, ''), 1, 120) as preview
        from sessions order by id desc limit ? offset ?`,
     )
@@ -260,6 +401,7 @@ export function listSessions(limit = 60, offset = 0): SessionSummary[] {
     mistake_count: number;
     level: Level | null;
     source: string;
+    graded: number;
     preview: string;
   }[];
 
@@ -272,6 +414,7 @@ export function listSessions(limit = 60, offset = 0): SessionSummary[] {
     level: r.level,
     preview: r.preview,
     imported: r.source === "import",
+    graded: Number(r.graded) === 1,
   }));
 }
 
@@ -328,6 +471,7 @@ export function readSession(id: number): SessionDetail | null {
     level: r.level,
     preview: (r.answer ?? "").slice(0, 120),
     imported: r.source === "import",
+    graded: r.feedback !== null,
     question: r.question,
     answer: r.answer,
     feedback: r.feedback ? (JSON.parse(r.feedback) as Feedback) : null,

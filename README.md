@@ -165,6 +165,9 @@ YAP_BACKUP=/Users/사용자명/Library/Mobile Documents/com~apple~CloudDocs/yap-
 무료 티어의 정확한 한도는 계정·지역마다 달라서
 [AI Studio 대시보드](https://aistudio.google.com/rate-limit)에서 확인해야 합니다.
 
+**요청이 떨어져도 그날 연습은 남습니다.** 채점에 실패하면 쓴 답변이 그대로 저장되고
+(연속 학습일·기록에 다 들어갑니다), 피드백은 홈 맨 위 **이어서 하기**에서 나중에 받으면 됩니다.
+
 프로바이더 분기는 `src/lib/llm.ts`, 실제 호출은 `gemini.ts` / `claude.ts`에 각각 들어 있습니다.
 프롬프트·스키마·UI는 양쪽이 그대로 공유합니다.
 
@@ -237,6 +240,7 @@ src/
     api/question/route.ts       토픽 → 질문 + 힌트 (더 쉬운 질문으로 교체도 여기)
     api/coach/route.ts          답변 → 6단계 피드백 + 저장 + 트로피 판정
     api/opener/route.ts         한국어 초안 → 영어 첫 문장 한 개
+    api/pending/route.ts        피드백을 못 받은 답변이 있는지
     api/sessions/route.ts       날짜별 목록          api/sessions/[id]  세션 전문
     api/expressions/route.ts    배운 표현 목록       api/profile        레벨·통계
     api/usage/route.ts          요청 수 · 토큰 · 예상 비용
@@ -244,6 +248,7 @@ src/
     Home.tsx                    히어로 + 토픽 그리드 + 대시보드 + 사용량
     Session.tsx                 질문 / 작성 / 피드백 루프 + 막혔을 때의 두 개의 문
     About.tsx                   "나에 대해" — 질문을 내 얘기로 만드는 재료
+    Pending.tsx                 "이어서 하기" — 피드백을 못 받은 답변
     FeedbackView.tsx            피드백 6단계 카드 (세션과 지난 연습이 함께 씀)
     History.tsx                 지난 연습 목록과 상세
     Expressions.tsx             배운 표현 모아보기

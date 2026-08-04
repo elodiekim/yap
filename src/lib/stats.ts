@@ -137,10 +137,15 @@ export interface Badge {
 }
 
 /** Badges earned by the session that just finished. */
+/**
+ * `feedback` is null when the answer was saved but never graded (§5.9). The
+ * day still earns everything it did by being written — only the trophies that
+ * read the feedback itself are held back until it arrives.
+ */
 export function newBadges(
   before: Profile,
   after: Profile,
-  feedback: Feedback,
+  feedback: Feedback | null,
 ): Badge[] {
   const earned: Badge[] = [];
   const push = (id: string, emoji: string, label: string) => {
@@ -166,7 +171,8 @@ export function newBadges(
   if (after.vocab.length >= 30) push("vocab-30", "🌟", "표현 30개");
   if (after.vocab.length >= 75) push("vocab-75", "💎", "표현 75개");
 
-  if (feedback.mistakes.length === 0) push("flawless", "🎯", "고칠 것 없는 답변");
+  if (feedback && feedback.mistakes.length === 0)
+    push("flawless", "🎯", "고칠 것 없는 답변");
 
   if (after.topicsPracticed.length >= 5) push("topics-5", "🗺️", "주제 5개");
   if (after.topicsPracticed.length >= 9) push("topics-all", "🧭", "모든 주제");

@@ -163,6 +163,14 @@ export default function Page() {
           }}
           onHistory={() => go("history")}
           onExpressions={() => go("expressions")}
+          onOpenSession={(id) => {
+            setOpenSession(id);
+            setView("history");
+          }}
+          onBadges={(b) => {
+            setBadges(b);
+            setBadgeBatch((n) => n + 1);
+          }}
           onReset={() => {
             if (
               confirm(

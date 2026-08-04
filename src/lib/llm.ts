@@ -51,6 +51,28 @@ export async function generateJSON<T>(
   return generateJSONWithGemini<T>(opts);
 }
 
+/** Which wall a request hit, as far as we can tell. */
+export type Wall = "day" | "minute" | "unknown";
+
+export function isRateLimit(err: unknown): boolean {
+  const status = (err as { status?: number } | null)?.status;
+  const text = err instanceof Error ? err.message : "";
+  return status === 429 || /rate limit|quota|RESOURCE_EXHAUSTED/i.test(text);
+}
+
+/**
+ * Best-effort only. Google names the quota it refused in the error body, so a
+ * per-day metric is a strong signal — but the shape of that body is not
+ * something this app can pin down, so anything unrecognised stays "unknown"
+ * and the copy has to work without knowing (§5.9).
+ */
+export function rateLimitWall(err: unknown): Wall {
+  const text = err instanceof Error ? err.message : "";
+  if (/per[_ ]?day|requests_per_day|daily/i.test(text)) return "day";
+  if (/per[_ ]?minute|requests_per_minute/i.test(text)) return "minute";
+  return "unknown";
+}
+
 /** Turns a provider error into something worth showing a learner. */
 export function friendlyError(err: unknown): { message: string; status: number } {
   const status =

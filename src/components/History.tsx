@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { SessionDetail, SessionSummary } from "@/lib/types";
+import type { Feedback, SessionDetail, SessionSummary } from "@/lib/types";
 import { topicKo, topicLabel } from "@/lib/topics";
+import { gradeSession } from "@/lib/store";
 import { FeedbackView } from "./FeedbackView";
-import { Button, Card, Meta, Thinking } from "./ui";
+import { Button, Card, Meta, SectionLabel, Thinking } from "./ui";
 
 /** "2026-07-26" → "7월 26일 (일)" */
 function pretty(iso: string): string {
@@ -183,7 +184,13 @@ function SessionRow({
           ) : null}
         </span>
         <span className="ko shrink-0 text-[12px] text-faint">
-          {s.wordCount}단어 · 실수 {s.mistakeCount}
+          {/* "실수 0" on an ungraded answer would read as a flawless one. */}
+          {s.wordCount}단어 ·{" "}
+          {s.graded || s.imported ? (
+            <>실수 {s.mistakeCount}</>
+          ) : (
+            <span className="text-accent">피드백 대기</span>
+          )}
         </span>
       </div>
       {s.preview ? (
@@ -214,6 +221,56 @@ function SessionRow({
     >
       {body}
     </button>
+  );
+}
+
+/**
+ * An answer whose feedback never arrived (§5.9). The practice already counted;
+ * this is only the missing half, and it is one request away.
+ */
+function Ungraded({
+  id,
+  onGraded,
+}: {
+  id: number;
+  onGraded: (feedback: Feedback) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  async function grade() {
+    setBusy(true);
+    setFailed(false);
+    try {
+      const { feedback } = await gradeSession(id);
+      onGraded(feedback);
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="p-5">
+      <SectionLabel en="Not graded yet" ko="피드백 대기 중" />
+      <p className="ko mt-2.5 text-[14px] leading-relaxed text-muted">
+        이 답변은 저장됐지만 피드백을 못 받았어요. 이 연습은 이미 기록에
+        들어가 있고, 여기서 이어서 받으면 됩니다.
+      </p>
+      {failed ? (
+        <p className="ko mt-2 text-[13px] text-muted">
+          아직 요청이 안 열렸어요. 조금 뒤에 다시 눌러보세요.
+        </p>
+      ) : null}
+      <div className="mt-4">
+        {busy ? (
+          <Thinking label="답변을 읽고 있어요…" />
+        ) : (
+          <Button onClick={grade}>피드백 받기</Button>
+        )}
+      </div>
+    </Card>
   );
 }
 
@@ -276,6 +333,11 @@ function SessionPage({ id, onBack }: { id: number; onBack: () => void }) {
 
           {session.feedback ? (
             <FeedbackView feedback={session.feedback} />
+          ) : !session.imported ? (
+            <Ungraded
+              id={session.id}
+              onGraded={(feedback) => setSession({ ...session, feedback })}
+            />
           ) : null}
         </div>
       ) : null}

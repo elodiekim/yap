@@ -2,9 +2,10 @@
 
 import { TOPICS } from "@/lib/topics";
 import type { Mode, Profile } from "@/lib/types";
-import { streak } from "@/lib/store";
+import { streak, type Badge } from "@/lib/store";
 import { About } from "./About";
 import { Dashboard } from "./Dashboard";
+import { Pending } from "./Pending";
 import { Usage } from "./Usage";
 import { Button, Card, Meta } from "./ui";
 
@@ -13,12 +14,16 @@ export function Home({
   onStart,
   onHistory,
   onExpressions,
+  onOpenSession,
+  onBadges,
   onReset,
 }: {
   profile: Profile;
   onStart: (topic: string, mode: Mode) => void;
   onHistory: () => void;
   onExpressions: () => void;
+  onOpenSession: (id: number) => void;
+  onBadges: (b: Badge[]) => void;
   onReset: () => void;
 }) {
   const s = streak(profile.days);
@@ -46,6 +51,11 @@ export function Home({
           ) : null}
         </div>
       </header>
+
+      {/* Above the grid on purpose: finishing something beats starting one. */}
+      <div className="mt-10 empty:mt-0">
+        <Pending onBadges={onBadges} onOpenSession={onOpenSession} />
+      </div>
 
       <section className="mt-14 animate-rise [animation-delay:60ms]">
         <h2 className="text-[15px] font-semibold">

@@ -3,7 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import type { Feedback, Mode, Profile, Prompt, Turn } from "@/lib/types";
 import { topicKo, topicLabel } from "@/lib/topics";
-import { countWords, setProfile, today, type Badge } from "@/lib/store";
+import {
+  countWords,
+  gradeSession,
+  setProfile,
+  today,
+  type Badge,
+} from "@/lib/store";
 import { FeedbackView } from "./FeedbackView";
 import { Button, Card, Meta, SectionLabel, Thinking } from "./ui";
 
@@ -18,6 +24,21 @@ interface CoachResponse {
   feedback: Feedback;
   profile: Profile;
   badges: Badge[];
+}
+
+/**
+ * The grading call failed, but the answer is saved. Not an error response —
+ * from the learner's side nothing was lost except the feedback, and that is
+ * waiting for them (§5.9).
+ */
+interface PausedResponse {
+  paused: true;
+  rateLimited: boolean;
+  wall: "day" | "minute" | "unknown";
+  sessionId: number;
+  profile: Profile;
+  badges: Badge[];
+  detail: string;
 }
 
 /**
@@ -90,6 +111,9 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
   /** Korean set aside when the opener replaced it, kept visible to finish from. */
   const [korean, setKorean] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
+  const [paused, setPaused] = useState<PausedResponse | null>(null);
+  const [resuming, setResuming] = useState(false);
+  const [resumeFailed, setResumeFailed] = useState(false);
   const lastTurnRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -193,6 +217,33 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
     }
   }
 
+  /**
+   * Try again for the feedback that was missed. Succeeding here puts the
+   * conversation back exactly where it stopped — the answer is already saved,
+   * so this only fills in the gap and hands back the next question.
+   */
+  async function resume() {
+    if (!paused || resuming) return;
+    setResuming(true);
+    setResumeFailed(false);
+    try {
+      const { feedback, badges } = await gradeSession(paused.sessionId);
+      setTurns((prev) =>
+        prev.map((t, i) => (i === prev.length - 1 ? { ...t, feedback } : t)),
+      );
+      setPaused(null);
+      setSwapped(false);
+      setPrompt(feedback.followUp);
+      if (badges.length) onBadges(badges);
+    } catch {
+      // Deliberately not an error card: the answer is safe either way, and the
+      // page already says where to pick it up.
+      setResumeFailed(true);
+    } finally {
+      setResuming(false);
+    }
+  }
+
   const words = countWords(draft);
   const hangul = hangulCount(draft);
   const solid = draft.replace(/\s/g, "").length;
@@ -230,7 +281,6 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Couldn't get feedback.");
-      const { feedback, profile: saved, badges } = data as CoachResponse;
 
       const turn: Turn = {
         id: crypto.randomUUID(),
@@ -239,10 +289,26 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
         hints: prompt.hints,
         answer,
         words,
-        feedback,
+        feedback: null,
         createdAt: new Date().toISOString(),
       };
-      setTurns((prev) => [...prev, turn]);
+
+      // The answer got saved but not graded. Close the day deliberately rather
+      // than leaving a red box on top of a live composer (§5.9).
+      if ((data as PausedResponse).paused) {
+        const p = data as PausedResponse;
+        setTurns((prev) => [...prev, turn]);
+        setDraft("");
+        setKorean(null);
+        setPrompt(null);
+        setPaused(p);
+        setProfile(p.profile);
+        if (p.badges.length) onBadges(p.badges);
+        return;
+      }
+
+      const { feedback, profile: saved, badges } = data as CoachResponse;
+      setTurns((prev) => [...prev, { ...turn, feedback }]);
       setDraft("");
       setKorean(null);
       setSwapped(false); // a new question gets its own way out
@@ -295,7 +361,15 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
       ))}
 
       <div>
-        {loadingPrompt ? (
+        {paused ? (
+          <PausedCard
+            paused={paused}
+            busy={resuming}
+            failed={resumeFailed}
+            onResume={resume}
+            onExit={onExit}
+          />
+        ) : loadingPrompt ? (
           <Card className="p-5">
             <Thinking label="질문을 만들고 있어요…" />
           </Card>
@@ -450,6 +524,71 @@ function WayOut({
         </button>
       )}
     </div>
+  );
+}
+
+/**
+ * The end of a session that ran out of requests.
+ *
+ * Rule 3 of this app is that the conversation never ends — and after the day's
+ * quota is gone there is no call left to end it gracefully with. So the ending
+ * is built from what is already in hand: their answer, saved, counted, and a
+ * plain statement of where the feedback will be waiting. §5.9.
+ */
+function PausedCard({
+  paused,
+  busy,
+  failed,
+  onResume,
+  onExit,
+}: {
+  paused: PausedResponse;
+  busy: boolean;
+  failed: boolean;
+  onResume: () => void;
+  onExit: () => void;
+}) {
+  const tomorrow = paused.rateLimited && paused.wall === "day";
+  return (
+    <Card className="animate-rise p-5">
+      <SectionLabel
+        en={tomorrow ? "That's today" : "Paused"}
+        ko={tomorrow ? "오늘은 여기까지" : "잠시 멈췄어요"}
+      />
+      <p className="ko mt-2.5 text-[15px] leading-relaxed text-ink">
+        방금 쓴 답변은 저장했어요. <strong className="font-semibold">오늘 연습으로 기록됐고, 연속 학습일도 이어집니다.</strong>
+      </p>
+      <p className="ko mt-2 text-[14px] leading-relaxed text-muted">
+        {!paused.rateLimited
+          ? "다만 피드백을 받아오지 못했어요. 잠시 뒤에 다시 받아보거나, 홈에서 이어서 받아도 됩니다."
+          : tomorrow
+            ? "오늘 쓸 수 있는 AI 요청을 다 썼습니다. 피드백은 내일 홈에서 첫 순서로 기다리고 있어요."
+            : "AI 요청이 잠시 막혔어요. 조금 뒤에 다시 받아보거나, 홈에서 이어서 받아도 됩니다."}
+      </p>
+      {failed ? (
+        <p className="ko mt-2 text-[13px] text-muted">
+          아직 안 열렸네요. 답변은 그대로 저장돼 있으니 홈에서 이어서 받으면
+          됩니다.
+        </p>
+      ) : null}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {busy ? (
+          <Thinking label="답변을 읽고 있어요…" />
+        ) : (
+          <>
+            <Button
+              variant={tomorrow ? "ghost" : "primary"}
+              onClick={onResume}
+            >
+              지금 피드백 받아보기
+            </Button>
+            <Button variant="quiet" onClick={onExit}>
+              홈으로
+            </Button>
+          </>
+        )}
+      </div>
+    </Card>
   );
 }
 

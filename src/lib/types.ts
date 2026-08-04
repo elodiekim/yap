@@ -78,6 +78,8 @@ export interface SessionSummary {
   /** Empty for imported rows, which never had the answer text. */
   preview: string;
   imported: boolean;
+  /** False while an answer is still waiting on its feedback (§5.9). */
+  graded: boolean;
 }
 
 export interface SessionDetail extends SessionSummary {
@@ -93,6 +95,21 @@ export interface ExpressionEntry extends Expression {
   sessionId: number | null;
   topic: string | null;
   learnedOn: string | null;
+}
+
+/**
+ * An answer that was written and saved but never graded, because the grading
+ * call failed. The day it belongs to already counts; only the feedback is
+ * outstanding. See docs/product-spec.md §5.9.
+ */
+export interface PendingAnswer {
+  id: number;
+  practisedOn: string;
+  topic: string;
+  question: string;
+  answer: string;
+  words: number;
+  mode: Mode;
 }
 
 export interface UsageDay {

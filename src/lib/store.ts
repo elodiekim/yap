@@ -1,6 +1,12 @@
 "use client";
 
-import { EMPTY_PROFILE, type Profile } from "./types";
+import { today } from "./stats";
+import {
+  EMPTY_PROFILE,
+  type Feedback,
+  type PendingAnswer,
+  type Profile,
+} from "./types";
 
 export {
   countWords,
@@ -11,6 +17,7 @@ export {
   wordsToday,
   type Badge,
 } from "./stats";
+import type { Badge } from "./stats";
 
 /* ---------------------------------------------------------------------------
  * The profile now lives in SQLite on this machine; this module is just the
@@ -105,6 +112,34 @@ export async function saveAbout(about: string): Promise<void> {
   });
   if (!res.ok) throw new Error("could not save");
   setProfile((await res.json()) as Profile);
+}
+
+/**
+ * Fetch the feedback for an answer that was banked when grading failed (§5.9).
+ * The answer is already saved and already counted; this fills in the rest.
+ */
+export async function gradeSession(
+  id: number,
+): Promise<{ feedback: Feedback; badges: Badge[] }> {
+  const res = await fetch(`/api/sessions/${id}/feedback`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ practisedOn: today() }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "피드백을 받지 못했어요.");
+  setProfile(data.profile as Profile);
+  return {
+    feedback: data.feedback as Feedback,
+    badges: (data.badges ?? []) as Badge[],
+  };
+}
+
+export async function fetchPending(): Promise<PendingAnswer | null> {
+  const res = await fetch("/api/pending");
+  if (!res.ok) return null;
+  const data = (await res.json()) as { answer: PendingAnswer | null };
+  return data.answer;
 }
 
 export async function resetProfile(): Promise<void> {
