@@ -45,13 +45,23 @@ Always Korean (this is you explaining, so it should be effortless to read):
 
 ${englishVariantRules(ENGLISH_VARIANT)}`;
 
-export function profileBrief(profile: Profile): string {
+/**
+ * `showLevel` is false for the coach, and that is not a token saving.
+ *
+ * With the current level in the brief, the coach agreed with it every single
+ * time — thirteen sessions, thirteen B1s — while the same rubric applied
+ * without it separated the same answers into A2 / B1 / C1. The judgement has
+ * to be made without the answer in front of it (§5.10).
+ */
+export function profileBrief(profile: Profile, showLevel = true): string {
   const vocab = profile.vocab.slice(-40).map((v) => v.phrase);
   const parts = [
     profile.about
       ? `What they told you about their own life (use it; this is what makes nine topics last): ${profile.about}`
       : "They haven't written anything about their own life yet.",
-    `Estimated CEFR level: ${profile.level}`,
+    showLevel
+      ? `The level the app currently shows them, worked out from several past sessions — pitch the question at it: ${profile.level}`
+      : "",
     `Sessions so far: ${profile.totalConversations}`,
     `Topics already practised: ${profile.topicsPracticed.join(", ") || "none yet"}`,
     // Two jobs, and the second one is why this list is worth its tokens: an
@@ -63,7 +73,7 @@ export function profileBrief(profile: Profile): string {
       "none yet"
     }`,
   ];
-  return parts.join("\n");
+  return parts.filter(Boolean).join("\n");
 }
 
 export const QUESTION_SYSTEM = `${COACH_PERSONA}
@@ -157,7 +167,18 @@ If there are genuinely fewer than 3 real issues, give fewer — do not invent pr
 
 6. followUp — ALWAYS another open-ended question that flows naturally from what they just said, plus 4-5 idea hints in the same style as before. The conversation must never end. Build on a specific detail they mentioned. Where it fits naturally, shape it so the patterns they keep getting wrong — including the ones you just corrected above — are the obvious way to answer, and so that an expression they were taught earlier would be a natural thing to reach for. Never say you are doing either, and never let following a detail they raised lose out to targeting a pattern.
 
-7. level and levelNote — Estimate their CEFR level from THIS answer (A2, B1, B2, or C1), weighing the previously estimated level so it doesn't swing wildly. levelNote is one short encouraging sentence in Korean about where they are.`;
+7. level and levelNote — What CEFR level is THIS answer?
+
+Judge this answer on its own. Do NOT anchor on the level the profile says the app is showing them, and do not try to keep your reading steady from session to session — smoothing is the app's job and it does it in code. A reading that differs from the last one is information, not a mistake.
+
+Judge the English, not the effort or the length. A short answer that is precise and idiomatic is not A2; a long one held together by "and" and "so" is not B2.
+
+- A2 — simple sentences, mostly present and past, joined with and/but/so. Everyday vocabulary. The meaning arrives, but it stalls and restarts.
+- B1 — connected sentences, reasons and opinions on familiar things, some tense variety and subordination. Errors are frequent but local; they do not block meaning.
+- B2 — clear detailed writing that develops a point. Comfortable subordination, range in word choice, occasional idiom. Errors are noticeable but do not distort.
+- C1 — fluent and flexible. Precise word choice, hedging, control of register, varied structure. Errors are rare and minor.
+
+levelNote is one short encouraging sentence in Korean about where they are. It must never mention going down, and never compare this answer to an earlier one — the learner is not shown your per-answer reading, only the app's own running level.`;
 
 export const COACH_SYSTEM_EASY = `${COACH_SYSTEM}
 ${EASY_NOTE}

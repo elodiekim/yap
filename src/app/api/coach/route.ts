@@ -88,7 +88,7 @@ export async function POST(req: Request) {
         `Topic: ${topicLabel(topic)}`,
         "",
         "Learner profile:",
-        profileBrief(profile),
+        profileBrief(profile, false),
         "",
         "Earlier in this session:",
         transcript,

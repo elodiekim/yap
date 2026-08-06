@@ -1,7 +1,7 @@
 import { db, snapshot, tx } from "./db";
 import type { Usage } from "./llm";
 import { costOf, dailyRequestLimit } from "./pricing";
-import { newBadges, type Badge } from "./stats";
+import { LEVEL_WINDOW, levelAfter, newBadges, type Badge } from "./stats";
 import {
   EMPTY_PROFILE,
   type Expression,
@@ -128,6 +128,19 @@ export function readProfile(): Profile {
     if (levelHistory.at(-1)?.level !== row.level) levelHistory.push(row);
   }
 
+  // The raw per-answer readings the promotion rule works on — not the same as
+  // levelHistory above, which only keeps the points where the shown level moved.
+  const levelReadings = (
+    conn
+      .prepare(
+        `select level from sessions
+         where level is not null order by id desc limit ${LEVEL_WINDOW}`,
+      )
+      .all() as unknown as { level: Level }[]
+  )
+    .map((r) => r.level)
+    .reverse();
+
   const badges = (
     conn
       .prepare("select badge_id from badges order by earned_at")
@@ -149,6 +162,7 @@ export function readProfile(): Profile {
     mistakeHistory,
     recurrenceHistory,
     levelHistory,
+    levelReadings,
     badges,
     updatedAt: meta?.updated_at ?? "",
   };
@@ -208,12 +222,36 @@ function recordFeedback(sessionId: number, feedback: Feedback, easy: boolean) {
   }
 
   if (!easy) {
-    conn
-      .prepare(
-        "update profile set level = ?, updated_at = datetime('now') where id = 1",
-      )
-      .run(feedback.level);
+    // The model judged one answer; the level the learner sees is the app's,
+    // worked out from several. Reading the sessions back rather than trusting
+    // the single estimate is the whole point of §5.10.
+    const shown = (
+      conn.prepare("select level from profile where id = 1").get() as {
+        level: Level;
+      }
+    ).level;
+    const promoted = levelAfter(shown, recentReadings());
+    if (promoted !== shown) {
+      conn
+        .prepare(
+          "update profile set level = ?, updated_at = datetime('now') where id = 1",
+        )
+        .run(promoted);
+    }
   }
+}
+
+function recentReadings(): Level[] {
+  return (
+    db()
+      .prepare(
+        `select level from sessions
+         where level is not null order by id desc limit ${LEVEL_WINDOW}`,
+      )
+      .all() as unknown as { level: Level }[]
+  )
+    .map((r) => r.level)
+    .reverse();
 }
 
 function insertAnswer(input: Omit<SessionInput, "feedback">): number {

@@ -2,7 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { LEVELS, type Profile } from "@/lib/types";
-import { recurrenceTrend, streakInfo, wordsToday } from "@/lib/store";
+import {
+  levelProgress,
+  recurrenceTrend,
+  streakInfo,
+  wordsToday,
+} from "@/lib/store";
 import { Card, SectionLabel } from "./ui";
 
 /**
@@ -94,10 +99,12 @@ function Stat({
 
 function LevelMeter({ profile }: { profile: Profile }) {
   const idx = LEVELS.indexOf(profile.level);
+  const gate = levelProgress(profile.level, profile.levelReadings);
   return (
     <Card className="p-5">
       <div className="flex items-baseline justify-between gap-2">
-        <SectionLabel en="Level" ko="지금 레벨" />
+        {/* "도달" not "지금": this only ever goes up, so say which it is. */}
+        <SectionLabel en="Level reached" ko="도달 레벨" />
         <span className="text-[15px] font-semibold text-ink">
           {profile.level}
         </span>
@@ -124,8 +131,25 @@ function LevelMeter({ profile }: { profile: Profile }) {
           );
         })}
       </ol>
-      {profile.levelHistory.length > 1 ? (
+      {/*
+        Saying the rule out loud turns a meter that sits still into something
+        with a target on it. It also keeps the app honest about what the
+        number means: earned over several answers, never a single verdict.
+      */}
+      {gate.next ? (
+        <p className="ko mt-3 text-[13px] leading-relaxed text-muted">
+          최근 {gate.of}회 중 {gate.needed}회가 {gate.next} 이상이면 올라가요
+          {gate.have >= gate.of && gate.reached > 0 ? (
+            <span className="text-accent"> · 지금 {gate.reached}회</span>
+          ) : null}
+        </p>
+      ) : (
         <p className="ko mt-3 text-[13px] text-muted">
+          제일 위까지 왔어요. 여기서부터는 레벨 말고 문장으로 늘어요.
+        </p>
+      )}
+      {profile.levelHistory.length > 1 ? (
+        <p className="ko mt-1.5 text-[13px] text-faint">
           {profile.levelHistory[0].date}에 {profile.levelHistory[0].level}로
           시작했어요.
         </p>

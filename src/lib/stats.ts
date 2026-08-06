@@ -142,6 +142,66 @@ export interface Badge {
  * day still earns everything it did by being written — only the trophies that
  * read the feedback itself are held back until it arrives.
  */
+/* ------------------------------------------------------------------ 레벨 */
+
+/** How many recent graded answers the promotion rule looks at. */
+export const LEVEL_WINDOW = 5;
+/** How many of them have to reach the next level for it to be awarded. */
+export const LEVEL_PROMOTE = 3;
+
+const ORDER: Level[] = ["A2", "B1", "B2", "C1"];
+
+function rank(level: Level): number {
+  return ORDER.indexOf(level);
+}
+
+/**
+ * The level to show, given the level currently shown and the per-answer
+ * readings from recent sessions (newest last).
+ *
+ * Two rules, and the reasoning for both is in §5.10:
+ *
+ *  - **It only ever goes up.** A displayed level that can fall turns one tired
+ *    evening into a demotion and makes the 🚀 trophy something the app can take
+ *    back. Nothing in this app punishes a bad day.
+ *  - **One step at a time, on repeated evidence.** Three of the last five, so a
+ *    single generous reading cannot promote anyone, and B2 is not skipped on
+ *    the way to C1 — each level is a milestone worth arriving at.
+ */
+export function levelAfter(current: Level, readings: Level[]): Level {
+  const window = readings.slice(-LEVEL_WINDOW);
+  if (window.length < LEVEL_WINDOW) return current;
+
+  const next = ORDER[rank(current) + 1];
+  if (!next) return current;
+
+  const reached = window.filter((l) => rank(l) >= rank(next)).length;
+  return reached >= LEVEL_PROMOTE ? next : current;
+}
+
+/** How close the next level is, for the meter to say so out loud. */
+export function levelProgress(
+  current: Level,
+  readings: Level[],
+): {
+  next: Level | null;
+  reached: number;
+  needed: number;
+  of: number;
+  /** Readings available so far — the rule does not run below `of`. */
+  have: number;
+} {
+  const next = ORDER[rank(current) + 1] ?? null;
+  const window = readings.slice(-LEVEL_WINDOW);
+  return {
+    next,
+    reached: next ? window.filter((l) => rank(l) >= rank(next)).length : 0,
+    needed: LEVEL_PROMOTE,
+    of: LEVEL_WINDOW,
+    have: window.length,
+  };
+}
+
 export function newBadges(
   before: Profile,
   after: Profile,

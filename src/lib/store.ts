@@ -10,6 +10,8 @@ import {
 
 export {
   countWords,
+  levelAfter,
+  levelProgress,
   recurrenceTrend,
   streak,
   streakInfo,

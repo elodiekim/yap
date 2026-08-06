@@ -153,6 +153,11 @@ export interface Profile {
    */
   recurrenceHistory: { date: string; total: number; repeats: number }[];
   levelHistory: { date: string; level: Level }[];
+  /**
+   * The last few per-answer CEFR readings, oldest first. These are the raw
+   * judgements; `level` is what the promotion rule made of them (§5.10).
+   */
+  levelReadings: Level[];
   badges: string[];
   updatedAt: string;
 }
@@ -169,6 +174,7 @@ export const EMPTY_PROFILE: Profile = {
   mistakeHistory: [],
   recurrenceHistory: [],
   levelHistory: [],
+  levelReadings: [],
   badges: [],
   updatedAt: "",
 };

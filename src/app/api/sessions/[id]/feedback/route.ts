@@ -47,7 +47,7 @@ export async function POST(
         `Topic: ${topicLabel(pending.topic)}`,
         "",
         "Learner profile:",
-        profileBrief(profile),
+        profileBrief(profile, false),
         "",
         "Earlier in this session:",
         "(this is the first turn of the session)",
