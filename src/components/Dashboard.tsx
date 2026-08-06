@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { LEVELS, type Profile } from "@/lib/types";
+import { tagLabel } from "@/lib/tags";
 import {
   levelProgress,
   recurrenceTrend,
@@ -64,6 +65,7 @@ export function Dashboard({ profile }: { profile: Profile }) {
 
       <LevelMeter profile={profile} />
       <Recurrence trend={trend} />
+      <Patterns profile={profile} />
       <Badges profile={profile} />
     </div>
   );
@@ -336,6 +338,83 @@ const BADGE_LABELS: Record<string, string> = {
   "level-B2": "B2 도달",
   "level-C1": "C1 도달",
 };
+
+/** Below this a pattern is a one-off, not something they keep doing. */
+const PATTERN_FLOOR = 2;
+const PATTERN_SHOWN = 5;
+
+/**
+ * What the recurrence card above is actually about (§5.11).
+ *
+ * Telling someone their old mistakes are coming back without saying which ones
+ * leaves them with a number and nothing to do about it. Each row carries the
+ * learner's own most recent correction, because "주어와 동사 수 불일치" is a
+ * grammar term and "the shoes is → my shoes were" is a memory.
+ */
+function Patterns({ profile }: { profile: Profile }) {
+  const [all, setAll] = useState(false);
+  const patterns = profile.mistakePatterns.filter(
+    (p) => p.count >= PATTERN_FLOOR,
+  );
+
+  if (patterns.length === 0) {
+    return (
+      <Card className="p-5">
+        <SectionLabel en="Old habits" ko="자주 틀리는 것" />
+        <p className="ko mt-2.5 text-[13px] leading-relaxed text-muted">
+          같은 실수가 두 번 이상 나오면 여기에 모아서 보여줍니다. 아직은
+          없어요.
+        </p>
+      </Card>
+    );
+  }
+
+  const shown = all ? patterns : patterns.slice(0, PATTERN_SHOWN);
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-baseline justify-between gap-2">
+        <SectionLabel en="Old habits" ko="자주 틀리는 것" />
+        {patterns.length > PATTERN_SHOWN ? (
+          <button
+            onClick={() => setAll((a) => !a)}
+            aria-expanded={all}
+            className="ko shrink-0 text-[13px] text-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            {all ? "접기" : `전체 ${patterns.length}개`}
+          </button>
+        ) : null}
+      </div>
+      <p className="ko mt-2 text-[13px] leading-relaxed text-muted">
+        최근 연습에서 두 번 이상 나온 패턴이에요. 고치라는 목록이 아니라, 쓸 때
+        한 번 떠올려보라는 목록입니다.
+      </p>
+      <ul className="mt-3 divide-y divide-hair">
+        {shown.map((p) => (
+          <li key={p.tag} className="py-3 first:pt-1 last:pb-1">
+            <div className="flex items-baseline gap-3">
+              <span className="w-9 shrink-0 text-[13px] tabular-nums text-faint">
+                {p.count}회
+              </span>
+              <span className="ko text-[14px] leading-snug text-ink">
+                {tagLabel(p.tag)}
+              </span>
+            </div>
+            <p className="mt-1 pl-12 text-[13px] leading-relaxed">
+              <span className="text-muted">{p.example.original}</span>
+              <span aria-hidden className="px-1.5 text-faint">
+                →
+              </span>
+              <span className="font-medium text-accent">
+                {p.example.better}
+              </span>
+            </p>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
 
 function Badges({ profile }: { profile: Profile }) {
   return (

@@ -28,6 +28,12 @@ export interface Expression {
 export interface MistakePattern {
   tag: string;
   count: number;
+  /**
+   * Their own most recent correction carrying this tag. A tag name alone is a
+   * statistic; the sentence they actually wrote is what makes it recognisable
+   * next time (docs/product-spec.md §5.11).
+   */
+  example: { original: string; better: string };
 }
 
 export interface FollowUp {

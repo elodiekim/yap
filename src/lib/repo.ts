@@ -47,15 +47,24 @@ export function readProfile(): Profile {
   // Counted over recent sessions only. All-time counts would keep a pattern
   // the learner has since fixed at the top of the list forever, and the point
   // of this is to aim at what they are getting wrong *now*.
+  // `original` and `better` are bare columns beside max(id): SQLite documents
+  // that they come from the row the max matched, so each pattern arrives with
+  // its most recent real correction attached without a second query.
   const mistakePatterns = conn
     .prepare(
-      `select tag, count(*) as count from mistakes
+      `select tag, count(*) as count, max(id) as recent, original, better
+       from mistakes
        where session_id in (select id from sessions order by id desc limit 30)
        group by tag
-       order by count desc, max(id) desc
+       order by count desc, recent desc
        limit 12`,
     )
-    .all() as unknown as { tag: string; count: number }[];
+    .all() as unknown as {
+    tag: string;
+    count: number;
+    original: string;
+    better: string;
+  }[];
 
   const topicsPracticed = (
     conn
@@ -154,6 +163,7 @@ export function readProfile(): Profile {
     mistakePatterns: mistakePatterns.map((r) => ({
       tag: r.tag,
       count: Number(r.count),
+      example: { original: r.original, better: r.better },
     })),
     topicsPracticed,
     days,
