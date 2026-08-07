@@ -3,15 +3,31 @@
 import { useState } from "react";
 import type { Feedback } from "@/lib/types";
 import { PUBLIC_ENGLISH_VARIANT, variantKo } from "@/lib/english";
+import { dismissMistake } from "@/lib/store";
 import { speak } from "@/lib/speech";
 import { Card, SectionLabel } from "./ui";
 
-export function FeedbackView({ feedback }: { feedback: Feedback }) {
+export function FeedbackView({
+  feedback,
+  sessionId,
+  onFeedbackChange,
+}: {
+  feedback: Feedback;
+  /** Omitted where the feedback isn't editable yet — no session row to edit. */
+  sessionId?: number;
+  onFeedbackChange?: (next: Feedback) => void;
+}) {
   return (
     <div className="space-y-3">
       <Praise feedback={feedback} />
       <Rewrite text={feedback.rewrite} />
-      {feedback.mistakes.length > 0 ? <Mistakes feedback={feedback} /> : null}
+      {feedback.mistakes.length > 0 ? (
+        <Mistakes
+          feedback={feedback}
+          sessionId={sessionId}
+          onFeedbackChange={onFeedbackChange}
+        />
+      ) : null}
       <Expressions feedback={feedback} />
       <Shadowing lines={feedback.shadowing} />
     </div>
@@ -61,7 +77,34 @@ function Rewrite({ text }: { text: string }) {
   );
 }
 
-function Mistakes({ feedback }: { feedback: Feedback }) {
+function Mistakes({
+  feedback,
+  sessionId,
+  onFeedbackChange,
+}: {
+  feedback: Feedback;
+  sessionId?: number;
+  onFeedbackChange?: (next: Feedback) => void;
+}) {
+  const [busy, setBusy] = useState<number | null>(null);
+  const [dropped, setDropped] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const editable = sessionId !== undefined && onFeedbackChange !== undefined;
+
+  async function drop(index: number) {
+    if (!editable || busy !== null) return;
+    setBusy(index);
+    setError(null);
+    try {
+      onFeedbackChange(await dismissMistake(sessionId, index));
+      setDropped((n) => n + 1);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
     <Card className="animate-rise p-5 [animation-delay:80ms]">
       <SectionLabel
@@ -69,9 +112,16 @@ function Mistakes({ feedback }: { feedback: Feedback }) {
         en={`Worth fixing (${feedback.mistakes.length})`}
         ko="짚고 넘어갈 부분"
       />
+      {dropped > 0 ? (
+        <p className="ko mt-2 text-[13px] text-muted">
+          {dropped}개를 지웠어요. 통계와 &ldquo;자주 틀리는 것&rdquo;에서도
+          빠집니다.
+        </p>
+      ) : null}
+      {error ? <p className="ko mt-2 text-[13px] text-flag">{error}</p> : null}
       <ul className="mt-3 divide-y divide-hair">
         {feedback.mistakes.map((m, i) => (
-          <li key={i} className="py-4 first:pt-1 last:pb-1">
+          <li key={`${m.original}-${m.better}`} className="py-4 first:pt-1 last:pb-1">
             <div className="grid gap-1.5 sm:grid-cols-[1fr_auto_1fr] sm:items-baseline sm:gap-3">
               <p className="text-[14px] leading-relaxed text-flag line-through decoration-flag/40">
                 {m.original}
@@ -89,6 +139,19 @@ function Mistakes({ feedback }: { feedback: Feedback }) {
             <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
               예: {m.example}
             </p>
+            {/*
+              Deliberately plain text at the end of the item, not an ✕ in the
+              corner: this should take a decision, not a stray tap. §5.12
+            */}
+            {editable ? (
+              <button
+                onClick={() => drop(i)}
+                disabled={busy !== null}
+                className="ko mt-2 rounded-md text-[13px] text-faint hover:text-flag disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              >
+                {busy === i ? "지우는 중…" : "이건 아닌 것 같아요"}
+              </button>
+            ) : null}
           </li>
         ))}
       </ul>

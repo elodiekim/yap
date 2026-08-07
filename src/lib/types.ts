@@ -59,6 +59,8 @@ export interface Prompt {
 
 export interface Turn {
   id: string;
+  /** The row this turn was saved as — null until the grading call comes back. */
+  sessionId: number | null;
   topic: string;
   question: string;
   hints: string[];

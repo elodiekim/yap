@@ -22,6 +22,7 @@ interface Props {
 
 interface CoachResponse {
   feedback: Feedback;
+  sessionId: number;
   profile: Profile;
   badges: Badge[];
 }
@@ -227,9 +228,13 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
     setResuming(true);
     setResumeFailed(false);
     try {
-      const { feedback, badges } = await gradeSession(paused.sessionId);
+      const { feedback, sessionId, badges } = await gradeSession(
+        paused.sessionId,
+      );
       setTurns((prev) =>
-        prev.map((t, i) => (i === prev.length - 1 ? { ...t, feedback } : t)),
+        prev.map((t, i) =>
+          i === prev.length - 1 ? { ...t, feedback, sessionId } : t,
+        ),
       );
       setPaused(null);
       setSwapped(false);
@@ -284,6 +289,7 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
 
       const turn: Turn = {
         id: crypto.randomUUID(),
+        sessionId: null,
         topic,
         question: prompt.question,
         hints: prompt.hints,
@@ -297,7 +303,7 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
       // than leaving a red box on top of a live composer (§5.9).
       if ((data as PausedResponse).paused) {
         const p = data as PausedResponse;
-        setTurns((prev) => [...prev, turn]);
+        setTurns((prev) => [...prev, { ...turn, sessionId: p.sessionId }]);
         setDraft("");
         setKorean(null);
         setPrompt(null);
@@ -307,8 +313,8 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
         return;
       }
 
-      const { feedback, profile: saved, badges } = data as CoachResponse;
-      setTurns((prev) => [...prev, { ...turn, feedback }]);
+      const { feedback, sessionId, profile: saved, badges } = data as CoachResponse;
+      setTurns((prev) => [...prev, { ...turn, feedback, sessionId }]);
       setDraft("");
       setKorean(null);
       setSwapped(false); // a new question gets its own way out
@@ -356,7 +362,17 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
         >
           <AskedQuestion question={turn.question} index={i + 1} />
           <YourAnswer text={turn.answer} words={turn.words} />
-          {turn.feedback ? <FeedbackView feedback={turn.feedback} /> : null}
+          {turn.feedback ? (
+            <FeedbackView
+              feedback={turn.feedback}
+              sessionId={turn.sessionId ?? undefined}
+              onFeedbackChange={(feedback) =>
+                setTurns((prev) =>
+                  prev.map((t) => (t.id === turn.id ? { ...t, feedback } : t)),
+                )
+              }
+            />
+          ) : null}
         </div>
       ))}
 

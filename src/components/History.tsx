@@ -332,7 +332,13 @@ function SessionPage({ id, onBack }: { id: number; onBack: () => void }) {
           </Card>
 
           {session.feedback ? (
-            <FeedbackView feedback={session.feedback} />
+            <FeedbackView
+              feedback={session.feedback}
+              sessionId={session.id}
+              onFeedbackChange={(feedback) =>
+                setSession({ ...session, feedback })
+              }
+            />
           ) : !session.imported ? (
             <Ungraded
               id={session.id}

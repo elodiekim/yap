@@ -26,6 +26,16 @@ const rows = <T,>(sql: string, ...args: (string | number)[]) =>
 const one = <T,>(sql: string, ...args: (string | number)[]) =>
   db.prepare(sql).get(...args) as unknown as T | undefined;
 
+// This script opens the file read-only, so it never runs the migrations the
+// app does. Anything added by `addColumnIfMissing` has to be checked for.
+const hasColumn = (table: string, column: string) =>
+  rows<{ name: string }>(`pragma table_info(${table})`).some(
+    (c) => c.name === column,
+  );
+const liveMistakes = hasColumn("mistakes", "dismissed_at")
+  ? "dismissed_at is null"
+  : "1 = 1";
+
 const dim = (s: string) => `\x1b[2m${s}\x1b[0m`;
 const bold = (s: string) => `\x1b[1m${s}\x1b[0m`;
 const rule = () => console.log(dim("─".repeat(64)));
@@ -151,8 +161,8 @@ for (const s of recent) {
 /* ------------------------------------------------------------- 자주 틀리는 것 */
 
 const tags = rows<{ tag: string; n: number }>(
-  `select tag, count(*) n from mistakes group by tag
-   order by n desc, max(id) desc limit 8`,
+  `select tag, count(*) n from mistakes where ${liveMistakes}
+   group by tag order by n desc, max(id) desc limit 8`,
 );
 if (tags.length > 0) {
   console.log();

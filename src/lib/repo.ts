@@ -54,7 +54,8 @@ export function readProfile(): Profile {
     .prepare(
       `select tag, count(*) as count, max(id) as recent, original, better
        from mistakes
-       where session_id in (select id from sessions order by id desc limit 30)
+       where dismissed_at is null
+         and session_id in (select id from sessions order by id desc limit 30)
        group by tag
        order by count desc, recent desc
        limit 12`,
@@ -108,9 +109,12 @@ export function readProfile(): Profile {
                 count(m.tag) as total,
                 sum(case when f.first_seen < s.id then 1 else 0 end) as repeats
          from sessions s
-         join mistakes m on m.session_id = s.id
+         join mistakes m on m.session_id = s.id and m.dismissed_at is null
+         -- Also filtered here: a correction the learner threw out must not be
+         -- the thing that makes a later one count as a repeat (§5.12).
          join (select tag, min(session_id) as first_seen
-               from mistakes group by tag) f on f.tag = m.tag
+               from mistakes where dismissed_at is null group by tag)
+           f on f.tag = m.tag
          group by s.id
          order by s.id desc
          limit ${CAP}`,
@@ -355,6 +359,55 @@ export function attachFeedback(
   const badges = award(before, after, feedback);
   backUp();
   return { profile: after, badges };
+}
+
+/**
+ * Throw out one correction the learner says is wrong (§5.12).
+ *
+ * A wrong correction does two kinds of damage at once — it teaches the wrong
+ * thing, and it counts toward "자주 틀리는 것" and the recurrence rate forever.
+ * So this has to reach both the stored feedback and the analytics row.
+ *
+ * The `mistakes` rows for a session are inserted in feedback order and the
+ * stored feedback is rewritten here on every dismissal, so the nth surviving
+ * row is always the nth entry the learner is looking at.
+ */
+export function dismissMistake(
+  sessionId: number,
+  index: number,
+): Feedback | null {
+  return tx(() => {
+    const conn = db();
+    const row = conn
+      .prepare("select feedback from sessions where id = ?")
+      .get(sessionId) as { feedback: string | null } | undefined;
+    if (!row?.feedback) return null;
+
+    const feedback = JSON.parse(row.feedback) as Feedback;
+    if (index < 0 || index >= feedback.mistakes.length) return null;
+
+    const live = conn
+      .prepare(
+        `select id from mistakes
+         where session_id = ? and dismissed_at is null
+         order by id`,
+      )
+      .all(sessionId) as unknown as { id: number }[];
+    if (live[index]) {
+      conn
+        .prepare(
+          "update mistakes set dismissed_at = datetime('now') where id = ?",
+        )
+        .run(live[index].id);
+    }
+
+    feedback.mistakes.splice(index, 1);
+    conn
+      .prepare("update sessions set feedback = ?, mistake_count = ? where id = ?")
+      .run(JSON.stringify(feedback), feedback.mistakes.length, sessionId);
+
+    return feedback;
+  });
 }
 
 function award(before: Profile, after: Profile, feedback: Feedback | null) {

@@ -54,7 +54,10 @@ create table if not exists mistakes (
   tag         text not null,
   original    text not null,
   better      text not null,
-  reason      text not null
+  reason      text not null,
+  -- Set when the learner said the correction was wrong (§5.12). Every query
+  -- that counts mistakes filters these out; nothing deletes them.
+  dismissed_at text
 );
 create index if not exists mistakes_tag on mistakes (tag);
 
@@ -113,6 +116,9 @@ function open(): DatabaseSync {
     "mode text not null default 'normal' check (mode in ('normal','easy'))",
   );
   addColumnIfMissing(conn, "profile", "about", "about text not null default ''");
+  // A correction the learner rejected. Kept rather than deleted — it is a
+  // record of the model being wrong, and every count filters it out anyway.
+  addColumnIfMissing(conn, "mistakes", "dismissed_at", "dismissed_at text");
   conn.exec("insert or ignore into profile (id) values (1)");
   return conn;
 }

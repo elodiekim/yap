@@ -122,7 +122,7 @@ export async function saveAbout(about: string): Promise<void> {
  */
 export async function gradeSession(
   id: number,
-): Promise<{ feedback: Feedback; badges: Badge[] }> {
+): Promise<{ feedback: Feedback; sessionId: number; badges: Badge[] }> {
   const res = await fetch(`/api/sessions/${id}/feedback`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -133,8 +133,25 @@ export async function gradeSession(
   setProfile(data.profile as Profile);
   return {
     feedback: data.feedback as Feedback,
+    sessionId: data.sessionId as number,
     badges: (data.badges ?? []) as Badge[],
   };
+}
+
+/** Tell the app one correction was wrong; get the feedback back without it. */
+export async function dismissMistake(
+  sessionId: number,
+  index: number,
+): Promise<Feedback> {
+  const res = await fetch(`/api/sessions/${sessionId}/dismiss`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ index }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "지우지 못했어요.");
+  setProfile(data.profile as Profile);
+  return data.feedback as Feedback;
 }
 
 export async function fetchPending(): Promise<PendingAnswer | null> {

@@ -118,6 +118,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       feedback,
+      sessionId: saved.sessionId,
       profile: saved.profile,
       badges: saved.badges,
     });
