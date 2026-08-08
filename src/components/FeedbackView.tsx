@@ -114,7 +114,7 @@ function Mistakes({
       />
       {dropped > 0 ? (
         <p className="ko mt-2 text-[13px] text-muted">
-          {dropped}개를 지웠어요. 통계와 &ldquo;자주 틀리는 것&rdquo;에서도
+          {dropped}개를 뺐어요. 통계와 &ldquo;자주 틀리는 것&rdquo;에서도
           빠집니다.
         </p>
       ) : null}
@@ -149,7 +149,7 @@ function Mistakes({
                 disabled={busy !== null}
                 className="ko mt-2 rounded-md text-[13px] text-faint hover:text-flag disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
-                {busy === i ? "지우는 중…" : "이건 아닌 것 같아요"}
+                {busy === i ? "빼는 중…" : "이 교정은 빼주세요"}
               </button>
             ) : null}
           </li>

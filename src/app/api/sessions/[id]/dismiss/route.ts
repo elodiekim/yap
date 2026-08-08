@@ -4,7 +4,7 @@ import { dismissMistake, readProfile } from "@/lib/repo";
 export const runtime = "nodejs";
 
 /**
- * "이건 아닌 것 같아요" — the learner rejecting one correction (§5.12).
+ * "이 교정은 빼주세요" — the learner rejecting one correction (§5.12).
  * No model call: this is the app being told it was wrong, not asking.
  */
 export async function POST(
