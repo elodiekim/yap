@@ -165,7 +165,7 @@ YAP_BACKUP=/Users/사용자명/Library/Mobile Documents/com~apple~CloudDocs/yap-
 | `NEXT_PUBLIC_ENGLISH_VARIANT` | `anz` | 쉐도잉 음성 선택용. 위와 같은 값으로 |
 | `YAP_BACKUP` | 없음 | 자동 백업 경로. 비우면 백업 안 함 |
 | `YAP_DB` | `data/yap.db` | DB 파일 위치 |
-| `FREE_TIER_DAILY_REQUESTS` | `20` | 사용량 카드에 표시할 한도. `off`로 끄기 |
+| `FREE_TIER_DAILY_REQUESTS` | 없음 | 사용량 카드에 표시할 하루 한도. 안 넣으면 막대를 안 그립니다 |
 
 ### 모델 프로바이더
 
@@ -175,8 +175,13 @@ YAP_BACKUP=/Users/사용자명/Library/Mobile Documents/com~apple~CloudDocs/yap-
 | 모델 | `gemini-3.6-flash` | `claude-opus-5` |
 | 비용 | 무료 티어 있음 (분당·일일 요청 제한) | 무료 티어 없음, 종량제 |
 
-무료 티어의 정확한 한도는 계정·지역마다 달라서
-[AI Studio 대시보드](https://aistudio.google.com/rate-limit)에서 확인해야 합니다.
+무료 티어의 정확한 한도는 **모델·계정·지역마다 달라서**
+[AI Studio 대시보드](https://aistudio.google.com/rate-limit)에서 확인해야 합니다. 거기 숫자를
+`FREE_TIER_DAILY_REQUESTS`에 넣으면 사용량 카드에 막대가 생깁니다. 안 넣으면 안 그립니다 —
+모르는 한도를 지어내지 않습니다.
+
+> 참고로 `gemini-3.5-flash-lite`는 2026-08 기준 **분당 15회 / 분당 25만 토큰 / 하루 500회**였습니다.
+> 하루 한도보다 **분당 한도에 먼저 걸립니다.**
 
 **요청이 떨어져도 그날 연습은 남습니다.** 채점에 실패하면 쓴 답변이 그대로 저장되고
 (연속 학습일·기록에 다 들어갑니다), 피드백은 홈 맨 위 **이어서 하기**에서 나중에 받으면 됩니다.

@@ -32,14 +32,15 @@ export function Usage() {
     };
   }, []);
 
-  // Shown even at zero — "20 requests left today" is worth knowing before you
+  // Shown even at zero — "requests left today" is worth knowing before you
   // start, and a card that hides itself is a card you can't find.
   if (!report) return null;
 
   const { today: t, month, dailyRequestLimit: limit } = report;
   const left = limit === null ? null : Math.max(0, limit - t.requests);
   const pct = limit === null ? 0 : Math.min(100, (t.requests / limit) * 100);
-  const tight = left !== null && left <= 3;
+  // A tenth of the day's allowance left, floored so a small limit still warns.
+  const tight = left !== null && left <= Math.max(3, limit! * 0.1);
 
   return (
     <Card className="p-5">
@@ -76,8 +77,9 @@ export function Usage() {
             />
           </div>
           <p className="ko mt-1.5 text-[12px] text-faint">
-            한 번의 대화는 질문 1회 + 답변마다 1회를 씁니다. 정확한 한도는 AI
-            Studio에서 확인하세요.
+            한 번의 대화는 질문 1회 + 답변마다 1회를 씁니다. 하루 한도보다{" "}
+            <strong className="font-medium">분당 한도</strong>에 먼저 걸리는
+            경우가 많아요 — 그럴 땐 잠시 뒤 다시 하면 됩니다.
           </p>
         </div>
       ) : null}

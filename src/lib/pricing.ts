@@ -30,13 +30,19 @@ export function costOf(
 }
 
 /**
- * Free-tier requests per day. The API reports `limit: 20` for gemini-3.6-flash
- * but Google publishes the real number only in the AI Studio dashboard, so
- * this is a display hint and overridable, not a rule the app enforces.
+ * Free-tier requests per day, for the usage card's "left today" hint.
+ *
+ * There is no default any more. It used to fall back to 20 — a number the API
+ * had reported for gemini-3.6-flash, drawn as a red progress bar for a user
+ * running gemini-3.5-flash-lite, whose real limit turned out to be 500. The
+ * card was 25x wrong and looked certain about it.
+ *
+ * The limit differs per model, per account and per region, and only the AI
+ * Studio dashboard knows it. So: set it or don't get the bar.
  */
 export function dailyRequestLimit(): number | null {
   const raw = process.env.FREE_TIER_DAILY_REQUESTS;
-  if (raw === "off") return null;
+  if (!raw || raw === "off") return null;
   const n = Number(raw);
-  return Number.isFinite(n) && n > 0 ? n : 20;
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
