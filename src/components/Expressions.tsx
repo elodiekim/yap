@@ -48,6 +48,8 @@ export function Expressions({
     );
   }, [all, query]);
 
+  const reused = all?.filter((e) => e.reusedOn !== null).length ?? 0;
+
   function play(e: ExpressionEntry) {
     setSpeaking(e.id);
     if (!speak(e.phrase, () => setSpeaking(null))) setSpeaking(null);
@@ -97,6 +99,13 @@ export function Expressions({
               {query.trim()
                 ? `${shown.length}개 찾음 · 전체 ${all.length}개`
                 : `전체 ${all.length}개`}
+              {/*
+                The number that actually matters. A list that only grows says
+                nothing about whether any of it became language (§5.15).
+              */}
+              {reused > 0 ? (
+                <span className="text-accent"> · 다시 쓴 것 {reused}개</span>
+              ) : null}
               {canSpeak ? " · 표현을 누르면 소리로 들려줍니다" : null}
             </p>
           </div>
@@ -137,6 +146,14 @@ export function Expressions({
                         <span className="text-[16px] font-medium leading-snug text-ink">
                           {e.phrase}
                         </span>
+                        {e.reusedOn ? (
+                          <span
+                            title={`${e.reusedOn}에 다시 썼어요`}
+                            className="ko shrink-0 rounded-md bg-accent-soft px-1.5 py-0.5 text-[11px] text-accent"
+                          >
+                            다시 씀
+                          </span>
+                        ) : null}
                       </button>
                       {e.sessionId !== null ? (
                         <button

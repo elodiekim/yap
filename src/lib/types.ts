@@ -103,6 +103,8 @@ export interface ExpressionEntry extends Expression {
   sessionId: number | null;
   topic: string | null;
   learnedOn: string | null;
+  /** First later answer that used it again; null while it is still only taught. */
+  reusedOn: string | null;
 }
 
 /**

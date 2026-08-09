@@ -580,6 +580,20 @@ export function readSession(id: number): SessionDetail | null {
 }
 
 /** Every expression ever taught, newest first. */
+/**
+ * When, if ever, the learner wrote this phrase again in a later answer.
+ *
+ * Plain substring match, so a reworded reuse is missed and the number errs
+ * low — which is the right direction for a figure that exists to tell us
+ * whether §5.15 is working. Measured before building it: 2 of 62.
+ */
+const REUSED_ON = `(
+  select min(s2.practised_on) from sessions s2
+  where s2.answer is not null
+    and (e.session_id is null or s2.id > e.session_id)
+    and instr(lower(s2.answer), lower(e.phrase)) > 0
+)`;
+
 export function listExpressions(): ExpressionEntry[] {
   const rows = db()
     .prepare(
@@ -589,7 +603,8 @@ export function listExpressions(): ExpressionEntry[] {
       `select e.id, e.phrase, e.meaning, e.example,
               case when s.source = 'live' then s.id end as session_id,
               case when s.source = 'live' then s.topic end as topic,
-              s.practised_on
+              s.practised_on,
+              ${REUSED_ON} as reused_on
        from expressions e
        left join sessions s on s.id = e.session_id
        order by e.id desc`,
@@ -602,6 +617,7 @@ export function listExpressions(): ExpressionEntry[] {
     session_id: number | null;
     topic: string | null;
     practised_on: string | null;
+    reused_on: string | null;
   }[];
 
   return rows.map((r) => ({
@@ -612,7 +628,38 @@ export function listExpressions(): ExpressionEntry[] {
     sessionId: r.session_id === null ? null : Number(r.session_id),
     topic: r.topic,
     learnedOn: r.practised_on,
+    reusedOn: r.reused_on,
   }));
+}
+
+/** Longest a hint is allowed to be, so a returning expression still reads as one. */
+const HINT_WORDS = 6;
+
+/**
+ * Expressions worth putting back in front of the learner (§5.15).
+ *
+ * Oldest first and never used since: the ones from last session are still
+ * fresh, and one taught a week ago is the one slipping away. Filtered to
+ * hint-shaped phrases, because the whole mechanism is that an expression and
+ * an idea hint are the same object — 61 of this learner's 62 already qualify.
+ */
+export function expressionsToRevive(limit = 8): string[] {
+  const rows = db()
+    .prepare(
+      `select e.phrase from expressions e
+       where ${REUSED_ON} is null
+       order by e.id
+       limit 40`,
+    )
+    .all() as unknown as { phrase: string }[];
+
+  return rows
+    .map((r) => r.phrase)
+    .filter((p) => {
+      const words = p.trim().split(/\s+/).length;
+      return words >= 2 && words <= HINT_WORDS && !/\.\.\.|…/.test(p);
+    })
+    .slice(0, limit);
 }
 
 /* ------------------------------------------------------------------ 사용량 */

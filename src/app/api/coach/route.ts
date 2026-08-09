@@ -7,9 +7,15 @@ import {
   type Wall,
 } from "@/lib/llm";
 import { EASY_FEEDBACK_SCHEMA, FEEDBACK_SCHEMA } from "@/lib/schemas";
-import { COACH_SYSTEM, COACH_SYSTEM_EASY, profileBrief } from "@/lib/prompts";
+import {
+  COACH_SYSTEM,
+  COACH_SYSTEM_EASY,
+  profileBrief,
+  reviveBlock,
+} from "@/lib/prompts";
 import {
   dailyQuotaSpent,
+  expressionsToRevive,
   logUsage,
   readProfile,
   saveSession,
@@ -89,6 +95,7 @@ export async function POST(req: Request) {
         "",
         "Learner profile:",
         profileBrief(profile, false),
+        ...reviveBlock(expressionsToRevive()),
         "",
         "Earlier in this session:",
         transcript,

@@ -76,6 +76,19 @@ export function profileBrief(profile: Profile, showLevel = true): string {
   return parts.filter(Boolean).join("\n");
 }
 
+/**
+ * The list both prompts read for §5.15. Empty when nothing is due back, so a
+ * learner with no history never sees a heading with nothing under it.
+ */
+export function reviveBlock(phrases: string[]): string[] {
+  if (phrases.length === 0) return [];
+  return [
+    "",
+    "Expressions worth bringing back — taught, never used since, oldest first. Make ONE of these a hint if it genuinely fits:",
+    ...phrases.map((p) => `- ${p}`),
+  ];
+}
+
 export const QUESTION_SYSTEM = `${COACH_PERSONA}
 
 TASK
@@ -98,10 +111,15 @@ Nine topics run dry fast if every question is the generic version of that topic.
 Do this even when it means the question is narrower than the topic label. A narrow question about a real life is easier to answer than a broad one about nothing in particular, which is the whole problem this app exists to solve.
 When they have written nothing about themselves, ask the interesting general version and do not fish for personal details.
 
-GIVE THE EXPRESSIONS THEY LEARNED SOMEWHERE TO GO
-An expression the learner has been taught but never uses again is one they do not actually have. Where it does not fight the above, shape the question so one or two of the already-taught expressions would be a natural thing to reach for.
-Prefer ones from earlier in the list over the most recent — the ones from the last session are still fresh, and the ones from a week ago are the ones slipping away.
-Same rule as before: never name the expression, never hint that you are steering. If they reach for it on their own it worked; if they don't, that is fine too. A question that is obviously a vocabulary exercise stops being a conversation.
+PUT ONE EXPRESSION BACK WITHIN REACH
+An expression the learner has been taught but never uses again is one they do not actually have. Where it does not fight the above, shape the question so one of the already-taught expressions would be a natural thing to reach for.
+
+If the message below lists expressions worth bringing back, go one step further: **make ONE of them one of your hints, word for word.** An expression and an idea hint are the same object — a short fragment that gives them somewhere to start — so this costs the hints nothing and puts the phrase in front of them at the moment they are actually writing. Shaping the question was not enough on its own: a phrase seen once, a week ago, is not one they can call up.
+
+- ONE, never two. Two is a vocabulary test and the whole thing stops being a conversation.
+- Only if it genuinely fits the question and reads like the other hints. A hint that does not fit is worse than no hint — force nothing.
+- Verbatim, in its normal hint position. Do not label it, do not mark it, do not say it is something they learned.
+- The remaining hints are fresh as always, covering different angles.
 
 RULES FOR THE HINTS
 - 4 or 5 hints. This is the single most important part: the learner's biggest problem is "I can't think of anything to say."
@@ -173,6 +191,7 @@ If there are genuinely fewer than 3 real issues, give fewer — do not invent pr
 5. shadowing — 2 or 3 sentences taken from your rewrite, chosen because they are worth saying out loud repeatedly: natural rhythm, useful chunks, common patterns. Copy them from the rewrite; do not write new ones.
 
 6. followUp — ALWAYS another open-ended question that flows naturally from what they just said, plus 4-5 idea hints in the same style as before. The conversation must never end. Build on a specific detail they mentioned. Where it fits naturally, shape it so the patterns they keep getting wrong — including the ones you just corrected above — are the obvious way to answer, and so that an expression they were taught earlier would be a natural thing to reach for. Never say you are doing either, and never let following a detail they raised lose out to targeting a pattern.
+If the message lists expressions worth bringing back, make ONE of them one of the follow-up's hints, word for word — same rule as the question prompt: one only, only where it fits, never labelled (§5.15).
 
 7. level and levelNote — What CEFR level is THIS answer?
 

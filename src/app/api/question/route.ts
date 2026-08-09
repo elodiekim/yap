@@ -5,8 +5,14 @@ import {
   QUESTION_SYSTEM,
   QUESTION_SYSTEM_EASY,
   profileBrief,
+  reviveBlock,
 } from "@/lib/prompts";
-import { logUsage, readProfile, recentQuestions } from "@/lib/repo";
+import {
+  expressionsToRevive,
+  logUsage,
+  readProfile,
+  recentQuestions,
+} from "@/lib/repo";
 import { today } from "@/lib/stats";
 import { topicLabel } from "@/lib/topics";
 import type { Mode, Prompt } from "@/lib/types";
@@ -34,12 +40,14 @@ export async function POST(req: Request) {
     const pastQuestions = recentQuestions(topic);
     if (body.avoid?.trim()) pastQuestions.push(body.avoid.trim());
 
+    const revive = expressionsToRevive();
     const userParts = [
       `Topic: ${topicLabel(topic)}`,
       "",
       "Learner profile:",
       profileBrief(profile),
     ];
+    userParts.push(...reviveBlock(revive));
     if (pastQuestions.length > 0) {
       userParts.push(
         "",
