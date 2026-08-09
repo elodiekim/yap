@@ -66,7 +66,7 @@ function requestQuestion(
     body: JSON.stringify({ topic, mode, avoid, practisedOn: today() }),
   }).then(async (r) => {
     const data = await r.json();
-    if (!r.ok) throw new Error(data.error ?? "Couldn't get a question.");
+    if (!r.ok) throw new Error(data.error ?? "질문을 받아오지 못했어요.");
     return data as Prompt;
   });
 }
@@ -196,7 +196,7 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Couldn't start it for you.");
+      if (!res.ok) throw new Error(data.error ?? "첫 문장을 만들지 못했어요.");
 
       // Anything before the first Hangul is English they already wrote; the
       // sentence continues from there, and the Korean is set aside, not lost.
@@ -285,7 +285,7 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Couldn't get feedback.");
+      if (!res.ok) throw new Error(data.error ?? "피드백을 받아오지 못했어요.");
 
       const turn: Turn = {
         id: crypto.randomUUID(),
