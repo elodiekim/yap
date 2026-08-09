@@ -420,6 +420,35 @@ CEFR 레벨은 질문 난이도와 🚀 트로피를 동시에 좌우하는데, 
 터미널 [/api/question] Error [BadRequestError]: 400 API error occurred: {"httpMeta":…
 ```
 
+### 5.14 가벼운 날의 힌트 — 수정 완료 (2026-08-09)
+
+8월 2일에 "가벼운 모드 힌트가 자기 규칙을 안 지킨다"고 적어뒀었다. **방향이 반대였다. 모델이 맞고 프롬프트가 틀렸다.**
+
+5.6절을 만들 때 `EASY_NOTE`에 이 줄을 넣었다:
+
+> Hints are almost-sentences they can finish, not angles to explore. "I had ___ for lunch" beats "Meals you enjoy".
+
+그런데 이건 **1절 규칙 2를 정면으로 위반한다** — *"힌트는 2~6 단어의 조각. 완성된 문장도, 모범 답안도 아니다."* `"I had ___ for lunch"`는 모범 답안에 빈칸을 뚫은 것이고, 한 문장이 답의 전부인 모드에서 그걸 주면 **학습자가 쓰는 부분이 거의 없어진다.** 5.8절에서 첫 문장을 넘겨줄 때 "한 문장만, 나머지는 본인이"라고 선을 그은 것과 같은 이유다.
+
+`EASY_NOTE`는 전체 시스템 프롬프트 **뒤에 붙는다.** 그래서 위의 규칙을 다듬을 수는 있어도 뒤집을 수는 없는데, 저 줄은 뒤집으려 했다. 모델은 무시하고 계속 조각을 냈다 — 실측하면 `Check my phone` / `Drink some water` / `Hit the snooze button`.
+
+**부담을 낮추는 것은 질문의 크기가 할 일이다**(5.6절이 이미 그렇게 정해뒀다). 힌트가 대신 할 일이 아니다.
+
+줄을 이렇게 바꿨다 — 규칙 2 안에서 실제로 의미 있는 차이만 남긴다:
+
+> 2~6 단어 조각은 그대로. 다만 생각해볼 **범주**가 아니라 **구체적인 것 자체**로. "Check my phone"이 "Morning habits"보다 낫다. 하나 고르는 것으로 할 일이 끝나야 한다.
+
+실측 (2026-08-09, 같은 토픽 travel):
+
+| | 질문 | 힌트 |
+|---|---|---|
+| 가볍게 | "What was the best place you visited on your last trip?" | A quiet beach / A busy night market / A cozy coffee shop / An old temple |
+| 보통 | "What was the most memorable trip you've taken so far, and what made it so special?" | A gorgeous view / Trying local food / An unexpected problem / Meeting nice people / A peaceful moment |
+
+가벼운 쪽은 **그대로 답이 되는 구체물**, 보통 쪽은 **3~10문장으로 펼칠 각도**다. 양쪽 다 조각이고, 규칙 2는 안 깨졌다.
+
+**교훈은 프롬프트 구조 쪽이다.** 덧붙이는 블록은 앞의 규칙을 다듬는 것만 할 수 있다. 뒤집어야 한다면 앞을 고쳐야 하고, 앞이 1절의 "취향이 아닌 규칙"이면 뒤집으면 안 되는 것이다.
+
 ## 6. 왜 DB가 필요한가
 
 지금 모든 기록은 `localStorage`에 있다. 개인 프로젝트에서 흔한 선택이고 시작하기엔 옳았지만, 이 앱에서는 **핵심 기능을 직접 무너뜨린다.**

@@ -113,12 +113,19 @@ RULES FOR THE HINTS
  * Today the learner has almost nothing left in the tank. See §5.6 — the load
  * lives in the size of the question, not the word count, so making the answer
  * short without making the question small just moves the guilt around.
+ *
+ * This block is appended to the full system prompt, so it can refine the rules
+ * above but must never contradict them. It did once: it asked for fill-in
+ * hints ("I had ___ for lunch"), which is a model answer, which rule 2 forbids
+ * outright. The model ignored it and kept writing fragments — it was right and
+ * the prompt was wrong. Lowering the bar is the *question's* job here (§5.6);
+ * handing over the sentence is not (§5.14).
  */
 const EASY_NOTE = `
 TODAY IS A LIGHT DAY
 They opened Yap on a day when they have very little energy, and showing up at all is the win. Everything below still applies, with these changes:
 - ONE question, answerable in a single sentence. One concrete fact, one small moment — "What did you have for lunch?", "Where did you go today?". Not "tell me about", not "what do you think of", nothing that needs a reason or a story.
-- Hints are almost-sentences they can finish, not angles to explore. "I had ___ for lunch" beats "Meals you enjoy".
+- Hints stay 2-6 word fragments exactly as above — but make them the concrete things themselves rather than categories to think inside. "Check my phone" beats "Morning habits". Picking one should be the entire effort.
 - Never imply the short answer is lesser. No "that's a good start", no "next time try writing more", no praise for length. One good sentence is the whole task, not a fraction of it.`;
 
 export const QUESTION_SYSTEM_EASY = `${QUESTION_SYSTEM}
