@@ -217,7 +217,10 @@ function SessionRow({
   return (
     <button
       onClick={() => onOpen(s.id)}
-      className="w-full rounded-card border border-hair bg-card p-4 text-left shadow-card transition-all duration-150 hover:border-hair-strong hover:shadow-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      // Same lift as the topic cards — these two look identical, so only one
+      // of them moving would read as a bug rather than a choice. See the note
+      // there on why the transition lists `translate` and not `transform`.
+      className="w-full rounded-card border border-hair bg-card p-4 text-left shadow-card transition-[translate,border-color,box-shadow] duration-200 ease-spring hover:-translate-y-0.5 hover:border-hair-strong hover:shadow-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
     >
       {body}
     </button>

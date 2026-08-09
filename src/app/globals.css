@@ -30,6 +30,12 @@
 
   --radius-card: 0.75rem;
 
+  /* Overshoots by ~56% of the distance and settles. Only ever put this on a
+     transform — a colour that overshoots its target just flashes. At a 2px
+     lift the overshoot is about one device pixel, which is the point: felt
+     rather than seen. */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
   /* Korean falls back to the OS face if a chunk hasn't loaded yet. */
   --font-sans:
     var(--font-plex), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;

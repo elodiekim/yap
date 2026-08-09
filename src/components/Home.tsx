@@ -75,7 +75,17 @@ export function Home({
               >
                 <button
                   onClick={() => onStart(t.id, "normal")}
-                  className="group flex h-full w-full items-start gap-3 rounded-card border border-hair bg-card p-4 text-left shadow-card transition-all duration-150 hover:border-hair-strong hover:shadow-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  /*
+                    The one place with hover movement (todo 10). Named
+                    properties rather than transition-all, so layout is never
+                    animated by accident.
+
+                    `translate`, not `transform`: Tailwind v4 compiles
+                    -translate-y-0.5 to the standalone `translate` property.
+                    Listing `transform` here looks right and animates nothing —
+                    the card would just snap up. Checked against the built CSS.
+                  */
+                  className="group flex h-full w-full items-start gap-3 rounded-card border border-hair bg-card p-4 text-left shadow-card transition-[translate,border-color,box-shadow] duration-200 ease-spring hover:-translate-y-0.5 hover:border-hair-strong hover:shadow-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
                   <span
                     aria-hidden

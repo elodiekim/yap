@@ -129,8 +129,12 @@
       배치별로 remount하며 5초 뒤 페이드아웃 (`src/app/page.tsx`, `src/app/globals.css`)
 - [x] 힌트 카드 접기 애니메이션 — `grid-template-rows` 트랜지션으로 펼침/접힘을
       대칭으로 처리 (`src/components/Session.tsx`)
-- [ ] (선택) hover 트랜지션을 스프링 커브로 — 지금은 linear/ease뿐
-      (`src/components/ui.tsx:97`, `Home.tsx:67`, `History.tsx:213`, `Dashboard.tsx:88`, `Usage.tsx:72`)
+- [x] hover에 스프링 커브 (2026-08-10). 항목 이름이 오해였다 — **색과 그림자는
+      오버슈트가 의미 없어서** 곡선만 바꿀 데가 없었다. 움직임을 먼저 넣어야 했다.
+      카드형 두 곳(`Home.tsx` 토픽 카드, `History.tsx` 세션 행)에 2px 부상 +
+      `--ease-spring`. 버튼은 색만 바뀌므로 그대로 둠
+      - 함정: Tailwind v4는 `-translate-y-*`를 `transform`이 아니라 **`translate`
+        프로퍼티**로 컴파일한다. `transition-[transform,…]`으로 쓰면 조용히 안 움직임
 - [ ] (선택, 파급 범위 큼) 헤딩 letter-spacing을 크기별로 스케일 — 지금은 전 크기 고정값
       (`src/app/globals.css:54`)
 - 보류: backdrop-blur 확장 금지 — 현재 `page.tsx:76` 한 곳만 절제되게 쓰는 중이고,
