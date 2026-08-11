@@ -150,6 +150,8 @@ export interface Profile {
   /** Recently recurring error patterns, most frequent first. */
   mistakePatterns: MistakePattern[];
   topicsPracticed: string[];
+  /** topic id → the last date it came up. Missing means never (§5.16). */
+  topicLastUsed: Record<string, string>;
   /** ISO dates (YYYY-MM-DD) on which the learner practised. */
   days: string[];
   totalConversations: number;
@@ -178,6 +180,7 @@ export const EMPTY_PROFILE: Profile = {
   vocab: [],
   mistakePatterns: [],
   topicsPracticed: [],
+  topicLastUsed: {},
   days: [],
   totalConversations: 0,
   totalWords: 0,

@@ -73,6 +73,20 @@ export function readProfile(): Profile {
       .all() as unknown as { topic: string }[]
   ).map((r) => r.topic);
 
+  // When each topic last came up. The light way in picks for the learner, so
+  // it is the one place the app can widen the material without asking them to
+  // decide anything — but only if it knows what is already stale (§5.16).
+  const topicLastUsed = Object.fromEntries(
+    (
+      conn
+        .prepare(
+          `select topic, max(practised_on) as last from sessions
+           where topic is not null group by topic`,
+        )
+        .all() as unknown as { topic: string; last: string }[]
+    ).map((r) => [r.topic, r.last]),
+  );
+
   const days = (
     conn
       .prepare(
@@ -170,6 +184,7 @@ export function readProfile(): Profile {
       example: { original: r.original, better: r.better },
     })),
     topicsPracticed,
+    topicLastUsed,
     days,
     totalConversations: Number(totals.n),
     totalWords: Number(totals.w),

@@ -12,6 +12,8 @@ export {
   countWords,
   levelAfter,
   levelProgress,
+  pickStaleTopic,
+  stalestTopics,
   recurrenceTrend,
   streak,
   streakInfo,

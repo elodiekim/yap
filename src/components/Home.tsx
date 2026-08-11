@@ -2,7 +2,7 @@
 
 import { TOPICS } from "@/lib/topics";
 import type { Mode, Profile } from "@/lib/types";
-import { streak, type Badge } from "@/lib/store";
+import { pickStaleTopic, streak, type Badge } from "@/lib/store";
 import { About } from "./About";
 import { Dashboard } from "./Dashboard";
 import { Pending } from "./Pending";
@@ -114,7 +114,7 @@ export function Home({
           })}
         </ul>
 
-        <LightDay onStart={onStart} />
+        <LightDay onStart={onStart} profile={profile} />
       </section>
 
       {!fresh ? (
@@ -171,8 +171,18 @@ export function Home({
  * The way in on a day with nothing left. Deliberately quieter than the topic
  * grid — it should be findable, not tempting (spec §5.6) — and it picks the
  * topic itself, because choosing is part of what feels like too much today.
+ *
+ * Picking *for* them is also the app's only chance to widen the material
+ * without adding a decision, so the pick leans on what has gone stale rather
+ * than rolling a fair die (§5.16).
  */
-function LightDay({ onStart }: { onStart: (topic: string, mode: Mode) => void }) {
+function LightDay({
+  onStart,
+  profile,
+}: {
+  onStart: (topic: string, mode: Mode) => void;
+  profile: Profile;
+}) {
   return (
     <div className="mt-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-hair pt-4">
       <p className="ko text-[13px] text-muted">
@@ -180,7 +190,13 @@ function LightDay({ onStart }: { onStart: (topic: string, mode: Mode) => void })
       </p>
       <button
         onClick={() =>
-          onStart(TOPICS[Math.floor(Math.random() * TOPICS.length)].id, "easy")
+          onStart(
+            pickStaleTopic(
+              TOPICS.map((t) => t.id),
+              profile.topicLastUsed,
+            ),
+            "easy",
+          )
         }
         className="ko rounded-md text-[13px] text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >

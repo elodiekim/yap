@@ -142,6 +142,45 @@ export interface Badge {
  * day still earns everything it did by being written — only the trophies that
  * read the feedback itself are held back until it arrives.
  */
+/* ------------------------------------------------------------------ 토픽 */
+
+/** How wide a pool the light day draws from. See below for why it isn't 1. */
+export const STALE_POOL = 3;
+
+/**
+ * The topics that have gone longest without coming up, oldest first, with
+ * never-used ones ahead of everything (§5.16).
+ *
+ * The light way in picks the topic itself, so uniform random could hand back
+ * yesterday's topic — and with nine topics practised unevenly it did: seven
+ * light sessions on one topic while another was never opened at all.
+ */
+export function stalestTopics(
+  ids: string[],
+  lastUsed: Record<string, string>,
+  count = STALE_POOL,
+): string[] {
+  return [...ids]
+    .sort((a, b) => (lastUsed[a] ?? "").localeCompare(lastUsed[b] ?? ""))
+    .slice(0, count);
+}
+
+/**
+ * One of them, at random.
+ *
+ * Not the single stalest: pressing the button and leaving without answering
+ * records nothing, so a purely deterministic pick would hand back the same
+ * topic on the next press. Three keeps that from happening while every
+ * candidate is still genuinely overdue.
+ */
+export function pickStaleTopic(
+  ids: string[],
+  lastUsed: Record<string, string>,
+): string {
+  const pool = stalestTopics(ids, lastUsed);
+  return pool[Math.floor(Math.random() * pool.length)] ?? ids[0];
+}
+
 /* ------------------------------------------------------------------ 레벨 */
 
 /** How many recent graded answers the promotion rule looks at. */
