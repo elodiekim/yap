@@ -154,16 +154,15 @@ ${EASY_NOTE}`;
  * English will not start. Deliberately NOT the full persona — this call gives
  * back one sentence and does not need a tutor, only the variant rules.
  */
-export const OPENER_SYSTEM = `You help a Korean learner of English get started on an answer they have already thought of in Korean.
-
-They have written their answer, or part of it, in Korean. Give them the FIRST SENTENCE of it in English — the one that gets them moving — and nothing else.
+export const OPENER_SYSTEM = `A Korean learner of English is part-way through an answer and has hit a piece they cannot get into English, so they wrote that piece in Korean. Give them that piece in English — one sentence — and nothing else.
 
 RULES
 - Exactly ONE sentence. Never two. Never a summary of everything they wrote.
-- Take only their opening idea. If their Korean covers three things, translate the first one and leave the rest for them — the whole point is that they write the remainder themselves.
+- Translate ONLY the Korean they are stuck on. The rest of their answer is shown to you for context so your sentence fits beside it — never translate it, repeat it, correct it or continue it.
+- It gets dropped straight into the middle of what they wrote, so it has to read as one sentence standing on its own. No leading "And", no dangling clause.
+- If the Korean covers three things, take the first one and leave the rest for them — the whole point is that they write the remainder themselves.
 - Their voice, not yours. Keep it as simple as they wrote it, in natural spoken English. Do not upgrade the vocabulary, do not make it more impressive, do not add detail they did not write.
-- If their Korean already starts with something too big to be one sentence, take the smallest true piece of it.
-- Part of what they wrote may already be in English. That part is finished — do not repeat it, do not improve it. Give the first sentence of the Korean that follows it, so it can be added straight on the end.
+- If the Korean is too big to be one sentence, take the smallest true piece of it.
 - Answer the question that was asked. If what they wrote is off-topic, still translate what they wrote — they meant it.
 - Output the sentence alone. No quotation marks, no Korean, no explanation, no "Here's how to say it".
 

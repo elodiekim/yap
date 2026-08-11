@@ -83,13 +83,40 @@ function askQuestion(topic: string, mode: Mode): Promise<Prompt> {
   return request;
 }
 
-/** Where the Korean starts, or -1. Everything before it is already written. */
-function hangulStart(text: string): number {
-  return text.search(/[가-힣]/);
-}
-
 function hangulCount(text: string): number {
   return text.match(/[가-힣]/g)?.length ?? 0;
+}
+
+/**
+ * The first run of Korean in the draft, with the English on either side of it.
+ *
+ * The run ends at whichever comes first: a sentence mark, or the point where
+ * English starts again. Both matter — the original version took everything
+ * from the first Hangul to the end of the draft, so writing
+ * `I went to the beach. 파도가 무서웠어. But I stayed.` and asking for help
+ * silently deleted "But I stayed." (§5.8).
+ */
+function koreanSpan(
+  text: string,
+): { before: string; span: string; after: string } | null {
+  const start = text.search(/[가-힣]/);
+  if (start < 0) return null;
+
+  const rest = text.slice(start);
+  const latin = rest.search(/[A-Za-z]/);
+  const sentence = rest.search(/[.!?]/);
+  const len =
+    sentence >= 0 && (latin < 0 || sentence < latin)
+      ? sentence + 1
+      : latin >= 0
+        ? latin
+        : rest.length;
+
+  return {
+    before: text.slice(0, start),
+    span: rest.slice(0, len).trim(),
+    after: rest.slice(len),
+  };
 }
 
 export function Session({ topic, mode, onBadges, onExit }: Props) {
@@ -178,11 +205,16 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
 
   /**
    * The second wall: they know what to say, in Korean, and the English will not
-   * start. One sentence back, never the whole answer — a translated answer is
+   * come. One Korean run at a time, swapped in place, so the sentences they
+   * already managed on either side survive.
+   *
+   * Still one sentence back and never the whole answer — a translated answer is
    * not practice, and the rest of the paragraph is the part they came here for.
+   * Anything the sentence did not cover stays visible in the aside.
    */
   async function openInEnglish() {
-    if (!prompt || opening) return;
+    const part = prompt ? koreanSpan(draft) : null;
+    if (!part || opening) return;
     setOpening(true);
     setError(null);
     try {
@@ -190,26 +222,31 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          question: prompt.question,
+          question: prompt!.question,
           draft,
+          korean: part.span,
           practisedOn: today(),
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "첫 문장을 만들지 못했어요.");
+      if (!res.ok) throw new Error(data.error ?? "영어로 바꾸지 못했어요.");
 
-      // Anything before the first Hangul is English they already wrote; the
-      // sentence continues from there, and the Korean is set aside, not lost.
-      const cut = hangulStart(draft);
-      const written = cut > 0 ? draft.slice(0, cut).trimEnd() : "";
       const english = (data.english as string).trim();
-      setKorean(draft.slice(cut < 0 ? 0 : cut).trim());
-      setDraft(written ? `${written} ${english} ` : `${english} `);
+      const head = part.before.trimEnd();
+      const tail = part.after.trimStart();
+      const next = [head, english, tail].filter(Boolean).join(" ");
+
+      setKorean(part.span);
+      setDraft(tail ? next : `${next} `);
+      // Land the caret right after the new sentence, which is where they are
+      // now writing — not at the end, which may be a paragraph further on.
+      const caret = (head ? head.length + 1 : 0) + english.length + 1;
       requestAnimationFrame(() => {
         const el = inputRef.current;
         if (!el) return;
         el.focus();
-        el.setSelectionRange(el.value.length, el.value.length);
+        const at = Math.min(caret, el.value.length);
+        el.setSelectionRange(at, at);
       });
     } catch (e) {
       setError((e as Error).message);
@@ -625,7 +662,8 @@ function KoreanAside({ text, onClose }: { text: string; onClose: () => void }) {
         {text}
       </p>
       <p className="ko mt-2.5 text-[13px] text-muted">
-        첫 문장은 넣어뒀어요. 나머지는 여기 보면서 이어서 써보세요.
+        이 부분을 영어로 바꿔 넣었어요. 못 담긴 내용이 있으면 여기 보면서 이어서
+        써보세요.
       </p>
     </Card>
   );
@@ -696,22 +734,26 @@ function Composer({
       />
       {/*
         The other half of "생각이 안 나요": they thought of it, in Korean, and
-        the English will not start. One sentence is a push off the wall; a whole
-        translation would take the practice away.
+        the English will not come. One run at a time is a push off the wall; a
+        whole translation would take the practice away.
+
+        Named for the action, not the position — it was "첫 문장 만들기", which
+        read as something you only use before you start writing. The learner
+        asked for exactly this feature while it was sitting on their screen.
       */}
       {offerOpener ? (
         <div className="animate-fade mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-accent-line bg-accent-soft px-3 py-2.5">
           <p className="ko text-[13px] text-body">
-            한국어로 쓰셨네요. 첫 문장만 영어로 만들어 드릴게요.
+            한국어로 쓴 데가 있네요. 한 군데씩 영어로 바꿔 드릴게요.
           </p>
           {opening ? (
-            <Thinking label="첫 문장을 옮기는 중이에요…" />
+            <Thinking label="영어로 옮기는 중이에요…" />
           ) : (
             <button
               onClick={onOpener}
               className="ko shrink-0 rounded-md text-[13px] font-medium text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
-              첫 문장 만들기 →
+              이 부분 영어로 →
             </button>
           )}
         </div>

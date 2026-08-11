@@ -17,13 +17,17 @@ export async function POST(req: Request) {
     const body = (await req.json()) as {
       question?: string;
       draft?: string;
+      korean?: string;
       practisedOn?: string;
     };
     const draft = body.draft?.trim().slice(0, DRAFT_MAX) ?? "";
-    const hangul = draft.match(/[가-힣]/g)?.length ?? 0;
+    // The one run they are stuck on. Falls back to the whole draft for older
+    // callers; the client has picked the run out since §5.8 was revised.
+    const korean = (body.korean?.trim() || draft).slice(0, DRAFT_MAX);
+    const hangul = korean.match(/[가-힣]/g)?.length ?? 0;
     if (hangul < MIN_HANGUL) {
       return NextResponse.json(
-        { error: "한국어로 쓴 내용이 있어야 첫 문장을 만들 수 있어요." },
+        { error: "한국어로 쓴 부분이 있어야 영어로 바꿀 수 있어요." },
         { status: 400 },
       );
     }
@@ -33,10 +37,13 @@ export async function POST(req: Request) {
       user: [
         `The question they were asked: ${body.question ?? "(unknown)"}`,
         "",
-        "What they wrote, in Korean:",
-        draft,
+        "Their answer so far, for context — do not translate or repeat this:",
+        draft || "(nothing yet)",
         "",
-        "Give the first sentence of that answer in English.",
+        "The Korean they are stuck on:",
+        korean,
+        "",
+        "Give that in English.",
       ].join("\n"),
       schema: OPENER_SCHEMA,
       effort: "low",
