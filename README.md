@@ -52,7 +52,7 @@ npm run dev
 | 3 | **중요한 실수 3~5개만** | 원문 / 개선문 / 짧은 이유 / 다른 예문 |
 | | ↳ 모델이 틀렸으면 | **이 교정은 빼주세요**로 그 항목만 지웁니다 (통계에서도 빠짐) |
 | 4 | **유용한 표현 3개** | 리라이트에서 뽑아옴 |
-| 5 | **쉐도잉 문장 2~3개** | 탭하면 소리로 읽어줌 (Web Speech API) |
+| 5 | **쉐도잉 문장 2~3개** | 탭하면 소리로 읽어줌 ([읽어주는 목소리](#읽어주는-목소리)) |
 | 6 | **다음 질문** | 힌트까지 같이. 대화는 끝나지 않음 |
 
 **5. 계속 답하면 대화가 이어집니다.**
@@ -169,7 +169,10 @@ YAP_BACKUP=/Users/사용자명/Library/Mobile Documents/com~apple~CloudDocs/yap-
 | `ANTHROPIC_API_KEY` | — | Claude를 쓸 때 필수 |
 | `GEMINI_MODEL` | `gemini-3.6-flash` | Pro로 바꾸면 무료 티어를 벗어납니다 |
 | `ENGLISH_VARIANT` | `anz` | 가르치는 영어의 종류 ([아래](#영어-변종-호주뉴질랜드--미국)) |
-| `NEXT_PUBLIC_ENGLISH_VARIANT` | `anz` | 쉐도잉 음성 선택용. 위와 같은 값으로 |
+| `NEXT_PUBLIC_ENGLISH_VARIANT` | `anz` | 기기 음성으로 되돌렸을 때 쓰는 값. 위와 같게 |
+| `TTS` | Gemini 음성 | `system`으로 두면 기기에 깔린 음성을 씁니다 ([아래](#읽어주는-목소리)) |
+| `GEMINI_TTS_MODEL` | `gemini-3.1-flash-tts-preview` | 음성 생성 모델 |
+| `GEMINI_TTS_VOICE` | `Aoede` | 음색. 억양은 `ENGLISH_VARIANT`가 정합니다 |
 | `YAP_BACKUP` | 없음 | 자동 백업 경로. 비우면 백업 안 함 |
 | `YAP_DB` | `data/yap.db` | DB 파일 위치 |
 | `FREE_TIER_DAILY_REQUESTS` | 없음 | 사용량 카드에 표시할 하루 한도. 안 넣으면 막대를 안 그립니다 |
@@ -260,6 +263,23 @@ NEXT_PUBLIC_ENGLISH_VARIANT=anz  # 쉐도잉 음성 선택용
 레벨 코멘트)은 한국어입니다. 이건 취향이 아니라 규칙입니다 — 설명까지 영어면 읽는 데 힘을 다
 써서 정작 학습이 안 됩니다.
 
+### 읽어주는 목소리
+
+쉐도잉 문장과 표현은 **Gemini TTS**가 읽습니다. 원래는 브라우저의 Web Speech API를 썼는데,
+이 맥에 깔린 en-AU 음성이 macOS 기본 `Karen` 하나뿐이라 매번 거기로 떨어졌습니다. 따라 읽으라고
+만든 기능이 로봇 리듬을 가르치고 있었습니다.
+
+**같은 문장은 한 번만 생성됩니다.** 만들어진 오디오는 `data/audio/`에 WAV로 저장되고, 두 번째
+재생부터는 요청이 나가지 않습니다. 같은 문장을 동시에 두 번 눌러도 생성은 한 번입니다.
+
+- 억양은 목소리가 아니라 `ENGLISH_VARIANT`가 정합니다. `GEMINI_TTS_VOICE`는 음색입니다.
+- 라우트가 실패하면 조용히 기기 음성으로 내려갑니다. 쉐도잉 도중의 에러 카드가 더 나쁩니다.
+- 요청을 아끼려면 `TTS=system`. 기기 음성으로 돌아갑니다.
+- 음성은 대화 모델과 **다른 모델이라 한도도 따로**입니다. 사용량 카드의 막대는 대화 요청만
+  세고, 음성은 그 아래에 따로 적습니다.
+- 음성 모델의 단가는 확인된 게 없어서, **음성을 쓴 날은 비용 칸이 비어 있습니다.** 모르는
+  숫자를 지어내지 않습니다.
+
 ## 구조
 
 ```
@@ -273,6 +293,7 @@ src/
     api/sessions/route.ts       날짜별 목록          api/sessions/[id]  세션 전문
     api/expressions/route.ts    배운 표현 목록       api/profile        레벨·통계
     api/usage/route.ts          요청 수 · 토큰 · 예상 비용
+    api/speak/route.ts          문장 → WAV. 들어본 문장이면 호출 없음
   components/
     Home.tsx                    히어로 + 토픽 그리드 + 대시보드 + 사용량
     Session.tsx                 질문 / 작성 / 피드백 루프 + 막혔을 때의 두 개의 문
@@ -294,6 +315,8 @@ src/
     english.ts                  영어 변종 규칙
     schemas.ts                  응답 JSON 스키마
     pricing.ts                  모델별 단가 (사용량 카드용)
+    tts.ts                      Gemini 음성 생성 + 디스크 캐시
+    speech.ts                   재생과 기기 음성 대비책 (브라우저)
     store.ts                    서버 프로필의 브라우저 캐시 + 최초 1회 이전
     types.ts / topics.ts
 scripts/

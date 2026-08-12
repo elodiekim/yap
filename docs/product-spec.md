@@ -553,6 +553,43 @@ CEFR 레벨은 질문 난이도와 🚀 트로피를 동시에 좌우하는데, 
 
 **감수하는 것:** 여력 없는 날에 처음 보는 토픽이 나올 수 있다. 가벼운 모드는 한 문장짜리 사실 질문을 하므로 부담이 크지 않고, 그래도 안 맞으면 "다른 질문으로"(5.8절)가 바로 아래에 있다.
 
+### 5.17 읽어주는 목소리 — 구현 완료 (2026-08-13)
+
+쉐도잉과 표현 읽기는 처음부터 브라우저의 `speechSynthesis`를 썼다. **쓰는 사람이 "되게 인위적"이라고 말해서** 이 맥에 깔린 음성을 실제로 뽑아봤다.
+
+```
+en_AU  Karen        ← 매번 이게 걸림
+en_NZ  (없음)
+en_GB  Daniel
+en_US  Samantha, Albert, Fred, Bad News, Bubbles, Zarvox …
+```
+
+영어 변종이 `anz`라 `en-NZ → en-AU` 순으로 찾는데 en-NZ가 없어서 **항상 Karen**으로 떨어졌다. Karen은 macOS 기본 compact 음성 — 음소를 이어붙이는 방식이라 원래 기계 소리가 난다. 거기에 쉐도잉용으로 속도를 0.92로 낮춰놔서 이음매가 더 들렸다. **따라 읽으라고 만든 기능인데 로봇의 리듬을 따라 읽게 된다.**
+
+macOS의 Enhanced/Premium 음성을 받는 게 코드 없는 해법이지만 시스템 설정에서 찾지 못했다. 그래서 **Gemini TTS로 옮겼다.**
+
+**핵심은 디스크 캐시다.** 재생마다 요청이 나가면 "한 문장을 다섯 번 듣는" 기능은 애초에 성립하지 않는다. 문장 하나는 **평생 한 번만** 생성되고, 그 뒤로는 `data/audio/`의 파일 읽기다. 키는 문장 + 모델 + 목소리 + 변종의 sha256이라 목소리를 바꾸면 옛 오디오가 나오지 않는다.
+
+측정하며 알게 된 것 (2026-08-13):
+
+| | |
+|---|---|
+| `response_format`에 `mime_type` | **거절됨** — `"Audio mime_type is not supported in response_format"` (400) |
+| 실제 응답 | `audio/l16; rate=24000; channels=1` — 컨테이너 없는 raw PCM |
+| 브라우저 재생 | 44바이트 RIFF 헤더를 앞에 붙이는 게 변환의 전부 |
+| 7초 문장 한 줄 | 입력 53토큰 + 오디오 226토큰 / 330KB |
+| 같은 문장 두 번 요청 | 1회 miss → 1회 hit, **바이트 동일** |
+
+**동시 요청도 합친다.** 같은 문장을 빠르게 두 번 누르면 두 번째가 첫 번째의 파일 쓰기 전에 도착해서 캐시를 놓친다. 실측에서 요청 4회에 파일이 3개였다 — 키가 한 번 샌 것. 진행 중인 생성을 키별로 붙들어서 뒤에 온 요청이 같은 오디오를 받아가게 했다. 3건 동시 요청 → 생성 1회로 확인.
+
+**실패는 조용히 기기 음성으로 내려간다.** 쉐도잉 도중의 빨간 에러가 로봇 목소리보다 나쁘다. 라우트가 죽든 `TTS=system`으로 꺼놨든 결과는 예전 동작이다.
+
+**억양은 목소리가 아니라 변종이 정한다.** Gemini의 프리셋 음성은 억양이 아니라 음색이고, 억양은 language code(`en-AU`/`en-US`)와 스타일 문장이 만든다. 뉴질랜드는 별도 language code가 없어서 `en-AU`에 얹고 스타일 문장이 끌고 간다 — 원래도 억양이 모델에 닿던 경로가 그쪽이었다. 6번 규칙(변종이 톤을 정한다)이 음성까지 그대로 이어진다.
+
+**사용량 카드는 이걸 따로 센다.** 음성은 모델이 달라서(`gemini-3.1-flash-tts-preview`) 한도도 따로다. 대화 모델의 하루 한도 막대에 음성 요청을 섞으면 5.9절이 25배 틀렸던 것과 같은 종류의 거짓말이 된다. 막대는 대화 요청만 세고, 음성은 그 아래 줄에 따로 적는다.
+
+**감수하는 것:** TTS 모델의 토큰 단가를 모른다. `pricing.ts`는 모르는 모델을 추측하지 않고 그날 비용 전체를 "—"로 떨어뜨리므로, **음성을 쓴 날은 비용 칸이 빈다.** 지어낸 숫자보다 빈 칸이 낫다는 같은 파일의 결정을 그대로 따른 것이고, 단가를 확인하면 한 줄로 되살아난다.
+
 ## 6. 왜 DB가 필요한가
 
 지금 모든 기록은 `localStorage`에 있다. 개인 프로젝트에서 흔한 선택이고 시작하기엔 옳았지만, 이 앱에서는 **핵심 기능을 직접 무너뜨린다.**
@@ -791,6 +828,7 @@ src/
     api/profile/route.ts      프로필 조회 / 나에 대해 / 이전 / 전체 삭제
     api/sessions/route.ts     지난 연습 목록      api/sessions/[id]  한 건 상세
     api/expressions/route.ts  배운 표현 목록      api/usage/route.ts AI 사용량
+    api/speak/route.ts        문장 → WAV, 캐시에 있으면 호출 없음 (5.17절)
   components/
     Home.tsx / Session.tsx / FeedbackView.tsx / Dashboard.tsx
     History.tsx / Expressions.tsx / Usage.tsx / About.tsx / Pending.tsx / ui.tsx
@@ -800,7 +838,8 @@ src/
     schemas.ts   응답 JSON 스키마       tags.ts                실수 태그 사전 27개
     db.ts        SQLite 연결·스키마·백업  repo.ts              모든 쿼리 (통계의 근거)
     stats.ts     연속일·반복률 계산(순수) store.ts             브라우저 프로필 캐시
-    pricing.ts   모델별 단가            speech.ts              쉐도잉 TTS
+    pricing.ts   모델별 단가            speech.ts              재생·기기 음성 대비책
+    tts.ts       Gemini 음성 생성 + 디스크 캐시 + 동시 요청 병합 (5.17절)
     types.ts / topics.ts
 scripts/
   db.mts  backup.mts  retag.mts        node --env-file-if-exists=.env.local 로 실행

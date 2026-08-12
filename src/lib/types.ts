@@ -125,6 +125,11 @@ export interface PendingAnswer {
 export interface UsageDay {
   day: string;
   requests: number;
+  /**
+   * How many of those went to the TTS model. It has its own quota, so these
+   * must not be counted against the conversation model's daily limit.
+   */
+  voiceRequests: number;
   inputTokens: number;
   outputTokens: number;
   /** null when a model in the mix has no price on file. */

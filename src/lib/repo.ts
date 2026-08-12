@@ -681,7 +681,7 @@ export function expressionsToRevive(limit = 8): string[] {
 
 export function logUsage(
   day: string,
-  kind: "question" | "coach" | "opener",
+  kind: "question" | "coach" | "opener" | "speak",
   usage: Usage,
 ): void {
   db()
@@ -704,6 +704,7 @@ function rollUp(
     day: string;
     model: string;
     requests: number;
+    voice_requests: number;
     input_tokens: number;
     output_tokens: number;
   }[],
@@ -713,11 +714,13 @@ function rollUp(
     const entry = byDay.get(r.day) ?? {
       day: r.day,
       requests: 0,
+      voiceRequests: 0,
       inputTokens: 0,
       outputTokens: 0,
       cost: 0 as number | null,
     };
     entry.requests += Number(r.requests);
+    entry.voiceRequests += Number(r.voice_requests);
     entry.inputTokens += Number(r.input_tokens);
     entry.outputTokens += Number(r.output_tokens);
 
@@ -737,6 +740,7 @@ export function readUsage(days = 30): {
   const rows = db()
     .prepare(
       `select day, model, count(*) as requests,
+              sum(case when kind = 'speak' then 1 else 0 end) as voice_requests,
               sum(input_tokens) as input_tokens,
               sum(output_tokens + thought_tokens) as output_tokens
        from usage_log
@@ -747,6 +751,7 @@ export function readUsage(days = 30): {
     day: string;
     model: string;
     requests: number;
+    voice_requests: number;
     input_tokens: number;
     output_tokens: number;
   }[];

@@ -13,6 +13,7 @@ export async function GET(req: Request) {
   const today = daily.find((d) => d.day === day) ?? {
     day,
     requests: 0,
+    voiceRequests: 0,
     inputTokens: 0,
     outputTokens: 0,
     cost: 0,

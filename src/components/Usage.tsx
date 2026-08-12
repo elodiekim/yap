@@ -37,8 +37,13 @@ export function Usage() {
   if (!report) return null;
 
   const { today: t, month, dailyRequestLimit: limit } = report;
-  const left = limit === null ? null : Math.max(0, limit - t.requests);
-  const pct = limit === null ? 0 : Math.min(100, (t.requests / limit) * 100);
+  // The limit belongs to the conversation model. Reading a sentence aloud goes
+  // to the TTS model, which has its own quota, so it cannot come out of this
+  // bar — that is how the card was 25x wrong the last time it assumed a number.
+  const spoken = t.voiceRequests;
+  const talked = t.requests - spoken;
+  const left = limit === null ? null : Math.max(0, limit - talked);
+  const pct = limit === null ? 0 : Math.min(100, (talked / limit) * 100);
   // A tenth of the day's allowance left, floored so a small limit still warns.
   const tight = left !== null && left <= Math.max(3, limit! * 0.1);
 
@@ -55,7 +60,7 @@ export function Usage() {
         <div className="mt-3">
           <div className="flex items-baseline justify-between gap-2">
             <p className="ko text-[14px] text-body">
-              오늘 <span className="font-semibold text-ink">{t.requests}</span>회
+              오늘 <span className="font-semibold text-ink">{talked}</span>회
               요청
             </p>
             <p
@@ -67,7 +72,7 @@ export function Usage() {
           <div
             className="mt-2 h-1 w-full overflow-hidden rounded-full bg-sunk"
             role="img"
-            aria-label={`오늘 ${t.requests}회 요청, 무료 한도 ${limit}회 중`}
+            aria-label={`오늘 ${talked}회 요청, 무료 한도 ${limit}회 중`}
           >
             <div
               className={`h-full rounded-full transition-[width] duration-500 ${
@@ -81,6 +86,12 @@ export function Usage() {
             <strong className="font-medium">분당 한도</strong>에 먼저 걸리는
             경우가 많아요 — 그럴 땐 잠시 뒤 다시 하면 됩니다.
           </p>
+          {spoken > 0 ? (
+            <p className="ko mt-1 text-[12px] text-faint">
+              여기에 더해 문장을 읽어준 게 {spoken}회. 음성은 모델이 달라서 한도도
+              따로고, 한 번 읽은 문장은 저장해뒀다가 다시 씁니다.
+            </p>
+          ) : null}
         </div>
       ) : null}
 
