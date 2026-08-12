@@ -82,12 +82,31 @@ export function setPace(pace: Pace): void {
 
 /* ------------------------------------------------------- 기기 음성 (대비책) */
 
+/**
+ * macOS ships one compact voice per accent and offers better ones as
+ * downloads, listed as "Karen (Enhanced)" or "Karen (Premium)" alongside the
+ * original. Picking the first match by language would keep choosing the
+ * compact one even after the good one is installed — the whole reason this app
+ * went looking for a different voice in the first place.
+ */
+function quality(voice: SpeechSynthesisVoice): number {
+  if (/premium/i.test(voice.name)) return 2;
+  if (/enhanced/i.test(voice.name)) return 1;
+  return 0;
+}
+
 function pickVoice(): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
   if (voices.length === 0) return null;
   for (const tag of VOICE_ORDER) {
-    const hit = voices.find((v) => v.lang.replace("_", "-").startsWith(tag));
-    if (hit) return hit;
+    const matches = voices.filter((v) =>
+      v.lang.replace("_", "-").startsWith(tag),
+    );
+    if (matches.length > 0) {
+      return matches.reduce((best, v) =>
+        quality(v) > quality(best) ? v : best,
+      );
+    }
   }
   return null;
 }
