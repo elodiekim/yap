@@ -176,16 +176,20 @@ let turn = 0;
 /* --------------------------------------------------- 어떤 목소리가 났는가 */
 
 /**
- * Which voice the last play actually used.
+ * Which voice the last play used, and — for the device voice — whether that was
+ * the plan.
  *
- * The fallback to the device voice is silent by design — an error card in the
- * middle of shadowing is worse than a plain voice. But silent turned out to
- * mean invisible: the free tier allows ten new sentences a day, and when it
- * ran out the learner just heard the old robot again and asked why some lines
- * "안 되는" 것 같은지. A quiet line of copy is the difference between a broken
- * feature and a known limit.
+ * Falling back is silent by design: an error card in the middle of shadowing is
+ * worse than a plain voice. But silent turned out to mean invisible, and when
+ * the ten-a-day ran out the learner just heard a different voice and asked why
+ * some lines "안 되는" 것 같은지. So a fallback says so.
+ *
+ * `chosen` exists because that note then started lying the other way. With
+ * `TTS=system` every play is the device voice on purpose, and a line reading
+ * "오늘 한도를 다 썼거나" turned a working setting into an apparent fault.
+ * Only `fallback` is worth telling anyone about.
  */
-export type VoiceSource = "server" | "device";
+export type VoiceSource = "server" | "chosen" | "fallback";
 
 let voice: VoiceSource = "server";
 const voiceListeners = new Set<() => void>();
@@ -209,15 +213,29 @@ function usedVoice(source: VoiceSource): void {
   for (const listener of voiceListeners) listener();
 }
 
+/** The route answering 501: the app is configured to use the device voice. */
+class ServerVoiceOff extends Error {}
+
+/**
+ * Remembered after the first 501, so `TTS=system` costs one round trip per page
+ * rather than one per tap.
+ */
+let serverVoiceOff = false;
+
 async function fetchAudio(text: string): Promise<string> {
   const cached = played.get(text);
   if (cached) return cached;
+  if (serverVoiceOff) throw new ServerVoiceOff();
 
   const res = await fetch("/api/speak", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text }),
   });
+  if (res.status === 501) {
+    serverVoiceOff = true;
+    throw new ServerVoiceOff();
+  }
   if (!res.ok) throw new Error(`speak route returned ${res.status}`);
 
   const url = URL.createObjectURL(await res.blob());
@@ -261,7 +279,7 @@ export function speak(text: string, onEnd?: () => void): boolean {
       };
       audio.onerror = () => {
         if (mine !== turn) return;
-        usedVoice("device");
+        usedVoice("fallback");
         if (!speakOnDevice(text, onEnd)) onEnd?.();
       };
       usedVoice("server");
@@ -269,8 +287,9 @@ export function speak(text: string, onEnd?: () => void): boolean {
     })
     .catch((err) => {
       if (mine !== turn) return;
-      console.warn("[speak] falling back to the device voice", err);
-      usedVoice("device");
+      const chosen = err instanceof ServerVoiceOff;
+      if (!chosen) console.warn("[speak] falling back to the device voice", err);
+      usedVoice(chosen ? "chosen" : "fallback");
       if (!speakOnDevice(text, onEnd)) onEnd?.();
     });
 
