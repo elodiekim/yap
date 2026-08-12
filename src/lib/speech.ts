@@ -124,6 +124,42 @@ const played = new Map<string, string>();
 /** Bumped on every call so a slow fetch cannot interrupt a newer one. */
 let turn = 0;
 
+/* --------------------------------------------------- 어떤 목소리가 났는가 */
+
+/**
+ * Which voice the last play actually used.
+ *
+ * The fallback to the device voice is silent by design — an error card in the
+ * middle of shadowing is worse than a plain voice. But silent turned out to
+ * mean invisible: the free tier allows ten new sentences a day, and when it
+ * ran out the learner just heard the old robot again and asked why some lines
+ * "안 되는" 것 같은지. A quiet line of copy is the difference between a broken
+ * feature and a known limit.
+ */
+export type VoiceSource = "server" | "device";
+
+let voice: VoiceSource = "server";
+const voiceListeners = new Set<() => void>();
+
+export function readVoice(): VoiceSource {
+  return voice;
+}
+
+export function serverVoice(): VoiceSource {
+  return "server";
+}
+
+export function subscribeVoice(listener: () => void): () => void {
+  voiceListeners.add(listener);
+  return () => voiceListeners.delete(listener);
+}
+
+function usedVoice(source: VoiceSource): void {
+  if (voice === source) return;
+  voice = source;
+  for (const listener of voiceListeners) listener();
+}
+
 async function fetchAudio(text: string): Promise<string> {
   const cached = played.get(text);
   if (cached) return cached;
@@ -166,19 +202,26 @@ export function speak(text: string, onEnd?: () => void): boolean {
   void fetchAudio(text)
     .then((url) => {
       if (mine !== turn) return;
+      // Assigning src re-runs the load algorithm even when the URL is
+      // unchanged, so a second listen restarts from the top on its own —
+      // verified in headless Chrome on 2026-08-13 rather than assumed.
       audio.src = url;
       applyPace(audio, readPace());
       audio.onended = () => {
         if (mine === turn) onEnd?.();
       };
       audio.onerror = () => {
-        if (mine === turn && !speakOnDevice(text, onEnd)) onEnd?.();
+        if (mine !== turn) return;
+        usedVoice("device");
+        if (!speakOnDevice(text, onEnd)) onEnd?.();
       };
+      usedVoice("server");
       return audio.play();
     })
     .catch((err) => {
       if (mine !== turn) return;
       console.warn("[speak] falling back to the device voice", err);
+      usedVoice("device");
       if (!speakOnDevice(text, onEnd)) onEnd?.();
     });
 

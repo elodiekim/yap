@@ -6,10 +6,13 @@ import { PUBLIC_ENGLISH_VARIANT, variantKo } from "@/lib/english";
 import { dismissMistake } from "@/lib/store";
 import {
   readPace,
+  readVoice,
   serverPace,
+  serverVoice,
   setPace,
   speak,
   subscribePace,
+  subscribeVoice,
   type Pace,
 } from "@/lib/speech";
 import { Card, SectionLabel } from "./ui";
@@ -226,6 +229,7 @@ function PaceControl() {
 
 function Shadowing({ lines }: { lines: string[] }) {
   const [speaking, setSpeaking] = useState<number | null>(null);
+  const voice = useSyncExternalStore(subscribeVoice, readVoice, serverVoice);
 
   function play(text: string, i: number) {
     setSpeaking(i);
@@ -264,6 +268,13 @@ function Shadowing({ lines }: { lines: string[] }) {
         문장을 누르면 {VARIANT_KO}식 발음으로 들려줍니다. 입에 붙을 때까지 따라
         읽어보세요. 속도는 바꿔도 새로 만들지 않으니 마음껏 눌러도 됩니다.
       </p>
+      {voice === "device" ? (
+        <p className="ko mt-1.5 text-[12px] text-faint">
+          지금은 기기에 깔린 음성으로 읽고 있어요. 오늘 좋은 목소리의 무료
+          한도를 다 썼거나 연결이 안 됐을 때 이렇게 됩니다 — 한 번 들어본
+          문장은 내일도 그대로 좋은 목소리로 나옵니다.
+        </p>
+      ) : null}
     </Card>
   );
 }

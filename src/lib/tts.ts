@@ -17,10 +17,31 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { GoogleGenAI } from "@google/genai";
 import { ENGLISH_VARIANT, speakerHome, type EnglishVariant } from "./english";
-import type { Usage } from "./llm";
+import { isRateLimit, type Usage } from "./llm";
 
-/** Model list on 2026-08-13 offered three TTS models; this is the newest. */
-export const TTS_MODEL = process.env.GEMINI_TTS_MODEL ?? "gemini-3.1-flash-tts-preview";
+/**
+ * TTS models to try, best first.
+ *
+ * The free tier is far tighter here than on the conversation model — measured
+ * 2026-08-13, `gemini-3.1-flash-tts` refuses the eleventh request of the day
+ * ("limit: 10"), and waiting does not help, so it is a daily ceiling and not a
+ * per-minute one. One feedback card is two or three shadowing lines plus three
+ * expressions, so a single learner can exhaust it before lunch.
+ *
+ * Each model carries its own quota, so falling through to the next buys a
+ * second allowance for nothing. `gemini-2.5-pro-preview-tts` is not in the list
+ * because the free tier reports "limit: 0" for it — it would only ever be a
+ * wasted round trip.
+ */
+export const TTS_MODELS: string[] = [
+  ...new Set([
+    process.env.GEMINI_TTS_MODEL ?? "gemini-3.1-flash-tts-preview",
+    "gemini-2.5-flash-preview-tts",
+  ]),
+];
+
+/** What the cache is keyed on: the preferred voice, not whichever answered. */
+export const TTS_MODEL = TTS_MODELS[0];
 
 /**
  * Gemini's prebuilt voices are not tied to an accent — the language code and
@@ -210,19 +231,52 @@ export async function speakServerSide(
   }
 }
 
+/** `interactions.create` is overloaded with a streaming form we never ask for. */
+type NonStreamingInteraction = Extract<
+  Awaited<ReturnType<GoogleGenAI["interactions"]["create"]>>,
+  { output_audio?: unknown }
+>;
+
+/**
+ * Walks `TTS_MODELS` until one produces audio.
+ *
+ * Only a rate limit moves on to the next model — a 400 or a 404 would fail the
+ * same way on all of them, and retrying would just spend the other model's
+ * allowance to arrive at the same error.
+ */
+async function firstModelThatAnswers(
+  text: string,
+  variant: EnglishVariant,
+): Promise<{ interaction: NonStreamingInteraction; model: string }> {
+  let lastError: unknown;
+
+  for (const model of TTS_MODELS) {
+    try {
+      const interaction = await gemini().interactions.create({
+        model,
+        input: `${styleLine(variant)}\n\n${text}`,
+        response_format: { type: "audio" },
+        generation_config: {
+          speech_config: [{ voice: VOICE, language: languageCode(variant) }],
+        },
+      });
+      return { interaction, model };
+    } catch (err) {
+      if (!isRateLimit(err)) throw err;
+      console.warn(`[tts] ${model} is out of quota, trying the next voice`);
+      lastError = err;
+    }
+  }
+
+  throw lastError;
+}
+
 async function generate(
   text: string,
   variant: EnglishVariant,
   key: string,
 ): Promise<Spoken> {
-  const interaction = await gemini().interactions.create({
-    model: TTS_MODEL,
-    input: `${styleLine(variant)}\n\n${text}`,
-    response_format: { type: "audio" },
-    generation_config: {
-      speech_config: [{ voice: VOICE, language: languageCode(variant) }],
-    },
-  });
+  const { interaction, model } = await firstModelThatAnswers(text, variant);
 
   const audio = interaction.output_audio;
   if (!audio?.data) {
@@ -241,7 +295,7 @@ async function generate(
   return {
     wav: bytes,
     usage: {
-      model: TTS_MODEL,
+      model,
       inputTokens: Number(u?.total_input_tokens ?? 0),
       outputTokens: Number(u?.total_output_tokens ?? 0),
       thoughtTokens: Number(u?.total_thought_tokens ?? 0),
