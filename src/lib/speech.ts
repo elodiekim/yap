@@ -14,6 +14,72 @@ const VOICE_ORDER = voicePreference(PUBLIC_ENGLISH_VARIANT);
  * plays the device voice instead of surfacing anything.
  */
 
+/* -------------------------------------------------------------- 재생 속도 */
+
+export type Pace = "slow" | "normal" | "fast";
+
+/**
+ * Playback speed, not three recordings.
+ *
+ * Generating a slow, a normal and a fast version of one sentence would be
+ * three requests and three files for something the audio element does with one
+ * property. The bytes on disk are one reading; this stretches them.
+ *
+ * The numbers are not 0.75/1/1.25 because 1.0 is not "보통". The TTS model
+ * reads at about 200 words per minute and will not be talked down — three
+ * different pace instructions landed at 124, 195 and 199 wpm. So the rates are
+ * pinned to what each label claims, against that 200 wpm baseline:
+ *
+ *   느리게  0.6  → ~120 wpm, slow enough to repeat after
+ *   보통    0.78 → ~155 wpm, ordinary conversation
+ *   빠르게  1.0  → ~200 wpm, the raw file, for listening rather than copying
+ *
+ * A control whose middle setting is faster than real speech would be lying.
+ */
+export const RATE: Record<Pace, number> = {
+  slow: 0.6,
+  normal: 0.78,
+  fast: 1,
+};
+
+const PACE_KEY = "yap.pace.v1";
+
+/**
+ * Slowing audio down without pitch correction drops the voice a fifth, which
+ * teaches the wrong vowels. Browsers default `preservesPitch` to true, but this
+ * feature exists to fix a pronunciation model — too load-bearing to leave to a
+ * default.
+ */
+function applyPace(audio: HTMLAudioElement, pace: Pace): void {
+  audio.preservesPitch = true;
+  audio.playbackRate = RATE[pace];
+}
+
+export function readPace(): Pace {
+  if (typeof window === "undefined") return "normal";
+  const saved = window.localStorage.getItem(PACE_KEY);
+  return saved === "slow" || saved === "fast" ? saved : "normal";
+}
+
+/** The server has no localStorage, so it always renders the middle setting. */
+export function serverPace(): Pace {
+  return "normal";
+}
+
+const paceListeners = new Set<() => void>();
+
+export function subscribePace(listener: () => void): () => void {
+  paceListeners.add(listener);
+  return () => paceListeners.delete(listener);
+}
+
+export function setPace(pace: Pace): void {
+  window.localStorage.setItem(PACE_KEY, pace);
+  // Takes effect mid-sentence, so trying a speed does not mean replaying first.
+  if (element) applyPace(element, pace);
+  for (const listener of paceListeners) listener();
+}
+
 /* ------------------------------------------------------- 기기 음성 (대비책) */
 
 function pickVoice(): SpeechSynthesisVoice | null {
@@ -34,8 +100,7 @@ function speakOnDevice(text: string, onEnd?: () => void): boolean {
   const voice = pickVoice();
   if (voice) utterance.voice = voice;
   utterance.lang = voice?.lang ?? VOICE_ORDER[0];
-  // Slightly under natural pace — this is for repeating after, not listening to.
-  utterance.rate = 0.92;
+  utterance.rate = RATE[readPace()];
   utterance.onend = () => onEnd?.();
   utterance.onerror = () => onEnd?.();
 
@@ -102,6 +167,7 @@ export function speak(text: string, onEnd?: () => void): boolean {
     .then((url) => {
       if (mine !== turn) return;
       audio.src = url;
+      applyPace(audio, readPace());
       audio.onended = () => {
         if (mine === turn) onEnd?.();
       };

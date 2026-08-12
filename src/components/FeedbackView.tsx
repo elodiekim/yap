@@ -1,10 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import type { Feedback } from "@/lib/types";
 import { PUBLIC_ENGLISH_VARIANT, variantKo } from "@/lib/english";
 import { dismissMistake } from "@/lib/store";
-import { speak } from "@/lib/speech";
+import {
+  readPace,
+  serverPace,
+  setPace,
+  speak,
+  subscribePace,
+  type Pace,
+} from "@/lib/speech";
 import { Card, SectionLabel } from "./ui";
 
 export function FeedbackView({
@@ -182,6 +189,41 @@ function Expressions({ feedback }: { feedback: Feedback }) {
 
 const VARIANT_KO = variantKo(PUBLIC_ENGLISH_VARIANT);
 
+const PACES: { id: Pace; ko: string }[] = [
+  { id: "slow", ko: "느리게" },
+  { id: "normal", ko: "보통" },
+  { id: "fast", ko: "빠르게" },
+];
+
+/**
+ * Changes how the audio is played, not which audio is fetched — the same file
+ * covers all three, so switching speed never spends a request.
+ */
+function PaceControl() {
+  // The setting lives in localStorage, which the server render cannot see —
+  // hence an external store rather than state seeded in an effect.
+  const pace = useSyncExternalStore(subscribePace, readPace, serverPace);
+
+  return (
+    <div className="flex items-baseline gap-1" role="group" aria-label="재생 속도">
+      {PACES.map((p) => (
+        <button
+          key={p.id}
+          onClick={() => setPace(p.id)}
+          aria-pressed={pace === p.id}
+          className={`ko rounded-md px-2 py-1 text-[12px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent ${
+            pace === p.id
+              ? "font-medium text-accent"
+              : "text-faint hover:text-body"
+          }`}
+        >
+          {p.ko}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function Shadowing({ lines }: { lines: string[] }) {
   const [speaking, setSpeaking] = useState<number | null>(null);
 
@@ -192,7 +234,10 @@ function Shadowing({ lines }: { lines: string[] }) {
 
   return (
     <Card className="animate-rise p-5 [animation-delay:160ms]">
-      <SectionLabel step={5} en="Read these aloud" ko="소리 내어 따라 읽기" />
+      <div className="flex items-baseline justify-between gap-3">
+        <SectionLabel step={5} en="Read these aloud" ko="소리 내어 따라 읽기" />
+        <PaceControl />
+      </div>
       <ul className="mt-3 space-y-1.5">
         {lines.map((line, i) => (
           <li key={i}>
@@ -217,7 +262,7 @@ function Shadowing({ lines }: { lines: string[] }) {
       </ul>
       <p className="ko mt-3 text-[13px] text-muted">
         문장을 누르면 {VARIANT_KO}식 발음으로 들려줍니다. 입에 붙을 때까지 따라
-        읽어보세요.
+        읽어보세요. 속도는 바꿔도 새로 만들지 않으니 마음껏 눌러도 됩니다.
       </p>
     </Card>
   );
