@@ -86,12 +86,6 @@ export function Usage() {
             <strong className="font-medium">분당 한도</strong>에 먼저 걸리는
             경우가 많아요 — 그럴 땐 잠시 뒤 다시 하면 됩니다.
           </p>
-          {spoken > 0 ? (
-            <p className="ko mt-1 text-[12px] text-faint">
-              여기에 더해 문장을 읽어준 게 {spoken}회. 음성은 모델이 달라서 한도도
-              따로고, 한 번 읽은 문장은 저장해뒀다가 다시 씁니다.
-            </p>
-          ) : null}
         </div>
       ) : null}
 
@@ -122,7 +116,56 @@ export function Usage() {
           예상치예요.
         </p>
       )}
+
+      <VoiceBudget voice={report.voice} />
     </Card>
+  );
+}
+
+/**
+ * The voice allowance is ten a day, not hundreds, so it gets its own bar. It is
+ * counted in new sentences rather than plays — replaying one already heard
+ * costs nothing, and the card should not make it look like it does.
+ */
+function VoiceBudget({ voice }: { voice: UsageReport["voice"] }) {
+  if (voice.limit === null) return null;
+
+  const left = Math.max(0, voice.limit - voice.used);
+  const pct = Math.min(100, (voice.used / voice.limit) * 100);
+  const spent = left === 0;
+
+  return (
+    <div className="mt-4 border-t border-hair pt-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="ko text-[14px] text-body">
+          오늘 읽어준 새 문장{" "}
+          <span className="font-semibold text-ink">{voice.used}</span>개
+        </p>
+        <p className={`ko text-[13px] ${spent ? "text-flag" : "text-muted"}`}>
+          {spent ? "오늘 몫은 다 썼어요" : `${left}개 남음`}
+        </p>
+      </div>
+      <div
+        className="mt-2 h-1 w-full overflow-hidden rounded-full bg-sunk"
+        role="img"
+        aria-label={`오늘 새 문장 ${voice.used}개, 한도 ${voice.limit}개 중`}
+      >
+        <div
+          className={`h-full rounded-full transition-[width] duration-500 ${
+            spent ? "bg-flag" : "bg-accent"
+          }`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="ko mt-1.5 text-[12px] text-faint">
+        음성은 대화와 <strong className="font-medium">다른 모델</strong>이라
+        한도도 따로입니다 — 하루 {voice.limit}개, 분당 3개. 한 번 들어본 문장은
+        저장해둬서 다시 들어도 안 깎입니다.
+        {voice.spare > 0
+          ? ` 한도가 찬 뒤 예비 목소리로 ${voice.spare}개 더 읽었어요.`
+          : ""}
+      </p>
+    </div>
   );
 }
 

@@ -18,6 +18,7 @@ import path from "node:path";
 import { GoogleGenAI } from "@google/genai";
 import { ENGLISH_VARIANT, speakerHome, type EnglishVariant } from "./english";
 import { isRateLimit, type Usage } from "./llm";
+import { speakRequestsToday } from "./repo";
 
 /**
  * TTS models to try, best first.
@@ -42,6 +43,39 @@ export const TTS_MODELS: string[] = [
 
 /** What the cache is keyed on: the preferred voice, not whichever answered. */
 export const TTS_MODEL = TTS_MODELS[0];
+
+/**
+ * Free-tier ceilings, read off this account's AI Studio dashboard on
+ * 2026-08-13. Not guesses — but they are one account's numbers on one day, so
+ * `TTS_DAILY_REQUESTS` overrides the daily one.
+ *
+ * The dashboard read `RPD 14 / 10`, which is the whole reason this gate exists:
+ * **a refused request still counts.** Four of that day's ten were spent on
+ * calls that could only ever come back 429, because three-per-minute is easy to
+ * trip — a shadowing card is three lines and they get tapped in a row.
+ */
+interface Ceiling {
+  perMinute: number;
+  perDay: number;
+}
+
+const CEILINGS: Record<string, Ceiling> = {
+  "gemini-3.1-flash-tts-preview": {
+    perMinute: 3,
+    perDay: Number(process.env.TTS_DAILY_REQUESTS) || 10,
+  },
+};
+
+/**
+ * A tap on a sentence is a foreground action — the learner is waiting with the
+ * card open. Past this, the device voice is the better answer.
+ */
+const REQUEST_TIMEOUT_MS = 20_000;
+
+/** The preferred voice's daily allowance, for the usage card. Null if unknown. */
+export function voiceDailyLimit(): number | null {
+  return CEILINGS[TTS_MODEL]?.perDay ?? null;
+}
 
 /**
  * Gemini's prebuilt voices are not tied to an accent — the language code and
@@ -231,6 +265,58 @@ export async function speakServerSide(
   }
 }
 
+/* ---------------------------------------------------------------- 한도 게이트 */
+
+/**
+ * When each model was last asked, newest last. Attempts, not successes — a 429
+ * is charged the same as audio.
+ *
+ * Held in memory, so a dev-server restart forgets the day's tally and the gate
+ * opens again. `speakRequestsToday` seeds it back from the usage log, which
+ * only recorded the calls that returned audio; refusals from before a restart
+ * are lost. The gate therefore errs towards *trying*, which is the right way
+ * to be wrong — the ceiling is Google's to enforce, and this only exists to
+ * stop the obviously doomed calls.
+ */
+const attempts = new Map<string, number[]>();
+let seeded = false;
+
+function history(model: string): number[] {
+  if (!seeded) {
+    seeded = true;
+    for (const [m, count] of Object.entries(speakRequestsToday())) {
+      // Timestamped at midnight: old enough that they never block on RPM, but
+      // still counted against the day.
+      const midnight = new Date().setHours(0, 0, 0, 0);
+      attempts.set(m, Array.from({ length: count }, () => midnight));
+    }
+  }
+  const found = attempts.get(model);
+  if (found) return found;
+  const fresh: number[] = [];
+  attempts.set(model, fresh);
+  return fresh;
+}
+
+/** False when the next call to `model` is certain to be refused. */
+function withinCeiling(model: string): boolean {
+  const ceiling = CEILINGS[model];
+  // No published numbers for this model — let the provider be the judge.
+  if (!ceiling) return true;
+
+  const now = Date.now();
+  const midnight = new Date().setHours(0, 0, 0, 0);
+  const seen = history(model).filter((t) => t >= midnight);
+  attempts.set(model, seen);
+
+  if (seen.length >= ceiling.perDay) return false;
+  return seen.filter((t) => now - t < 60_000).length < ceiling.perMinute;
+}
+
+function noteAttempt(model: string): void {
+  history(model).push(Date.now());
+}
+
 /** `interactions.create` is overloaded with a streaming form we never ask for. */
 type NonStreamingInteraction = Extract<
   Awaited<ReturnType<GoogleGenAI["interactions"]["create"]>>,
@@ -251,15 +337,29 @@ async function firstModelThatAnswers(
   let lastError: unknown;
 
   for (const model of TTS_MODELS) {
+    if (!withinCeiling(model)) {
+      console.warn(`[tts] skipping ${model} — its free-tier ceiling is spent`);
+      continue;
+    }
     try {
-      const interaction = await gemini().interactions.create({
-        model,
-        input: `${styleLine(variant)}\n\n${text}`,
-        response_format: { type: "audio" },
-        generation_config: {
-          speech_config: [{ voice: VOICE, language: languageCode(variant) }],
+      noteAttempt(model);
+      const interaction = await gemini().interactions.create(
+        {
+          model,
+          input: `${styleLine(variant)}\n\n${text}`,
+          response_format: { type: "audio" },
+          generation_config: {
+            speech_config: [{ voice: VOICE, language: languageCode(variant) }],
+          },
         },
-      });
+        // The SDK retries a 429 with backoff by default. Measured 2026-08-13,
+        // that turned one tap on a shadowing line into a 134-second wait — and
+        // a daily ceiling does not clear in two minutes, so every second of it
+        // was spent on a request that could not succeed. Failing immediately
+        // hands the line to the device voice while the learner is still looking
+        // at it.
+        { maxRetries: 0, timeout: REQUEST_TIMEOUT_MS },
+      );
       return { interaction, model };
     } catch (err) {
       if (!isRateLimit(err)) throw err;
@@ -268,7 +368,14 @@ async function firstModelThatAnswers(
     }
   }
 
-  throw lastError;
+  // Every model was either refused or skipped as spent. The client turns this
+  // into the device voice plus the line that says so.
+  throw (
+    lastError ??
+    Object.assign(new Error("Every TTS model has spent its free-tier quota."), {
+      status: 429,
+    })
+  );
 }
 
 async function generate(

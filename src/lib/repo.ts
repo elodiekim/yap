@@ -1,7 +1,7 @@
 import { db, snapshot, tx } from "./db";
 import type { Usage } from "./llm";
 import { costOf, dailyRequestLimit } from "./pricing";
-import { LEVEL_WINDOW, levelAfter, newBadges, type Badge } from "./stats";
+import { LEVEL_WINDOW, levelAfter, newBadges, today, type Badge } from "./stats";
 import {
   EMPTY_PROFILE,
   type Expression,
@@ -697,6 +697,25 @@ export function logUsage(
       usage.outputTokens,
       usage.thoughtTokens,
     );
+}
+
+/**
+ * Successful voice generations today, per model.
+ *
+ * Only successes: a refused request is never logged, yet Google counts it. So
+ * this is a floor on what the day has actually spent, never the true figure.
+ */
+export function speakRequestsToday(): Record<string, number> {
+  const rows = db()
+    .prepare(
+      `select model, count(*) as requests
+       from usage_log
+       where kind = 'speak' and day = ?
+       group by model`,
+    )
+    .all(today()) as unknown as { model: string; requests: number }[];
+
+  return Object.fromEntries(rows.map((r) => [r.model, Number(r.requests)]));
 }
 
 function rollUp(

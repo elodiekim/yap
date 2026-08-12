@@ -143,6 +143,15 @@ export interface UsageReport {
   models: string[];
   /** Free-tier requests per day, for the "left today" hint. */
   dailyRequestLimit: number | null;
+  /**
+   * The voice budget, which is a different model on a much tighter allowance.
+   * `spare` is what the fallback voices produced after the first ran out.
+   */
+  voice: {
+    used: number;
+    limit: number | null;
+    spare: number;
+  };
 }
 
 /** Everything Yap remembers about the learner. */

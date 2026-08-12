@@ -1,9 +1,25 @@
 import { NextResponse } from "next/server";
 import { dailyRequestLimit } from "@/lib/pricing";
-import { readUsage } from "@/lib/repo";
+import { readUsage, speakRequestsToday } from "@/lib/repo";
+import { TTS_MODEL, voiceDailyLimit } from "@/lib/tts";
 import type { UsageReport } from "@/lib/types";
 
 export const runtime = "nodejs";
+
+/**
+ * Voice is split from the conversation figures because it is a different model
+ * on a far tighter free tier — ten a day against hundreds. Rolling them into
+ * one number would hide whichever ran out.
+ */
+function voiceBudget(): UsageReport["voice"] {
+  const byModel = speakRequestsToday();
+  const used = byModel[TTS_MODEL] ?? 0;
+  const spare = Object.entries(byModel)
+    .filter(([model]) => model !== TTS_MODEL)
+    .reduce((n, [, count]) => n + count, 0);
+
+  return { used, limit: voiceDailyLimit(), spare };
+}
 
 export async function GET(req: Request) {
   // The browser passes its own calendar date so "today" matches the streak.
@@ -37,6 +53,7 @@ export async function GET(req: Request) {
     daily,
     models,
     dailyRequestLimit: dailyRequestLimit(),
+    voice: voiceBudget(),
   };
 
   return NextResponse.json(report);
