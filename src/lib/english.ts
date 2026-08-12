@@ -48,6 +48,31 @@ export function voicePreference(variant: EnglishVariant): string[] {
   }
 }
 
+/**
+ * Device voices to reach for by name, best first.
+ *
+ * Ranking by name for "(Premium)" or "(Enhanced)" does not work: Chrome
+ * localises the label and drops the suffix, so an upgraded Karen and the
+ * compact one both arrive as `Karen (영어(오스트레일리아))` with an identical
+ * `voiceURI` (measured 2026-08-13). The good copy is genuinely unreachable
+ * from the web API — there is nothing to select it *by*.
+ *
+ * What is reachable is the newer generation of Apple voices, which carry their
+ * own names. They are absent from `say -v '?'` — that lists the legacy
+ * synthesis voices — which is the signal that they are not the compact ones.
+ */
+export function preferredVoiceNames(variant: EnglishVariant): string[] {
+  switch (variant) {
+    case "us":
+      return ["Allison", "Ava", "Samantha"];
+    case "nz":
+    case "au":
+    case "anz":
+    default:
+      return ["Catherine", "Gordon", "Karen"];
+  }
+}
+
 /** Where the tutor is from, for the persona sentence. */
 export function speakerHome(variant: EnglishVariant): string {
   switch (variant) {

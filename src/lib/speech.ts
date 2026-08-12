@@ -1,6 +1,10 @@
 "use client";
 
-import { PUBLIC_ENGLISH_VARIANT, voicePreference } from "./english";
+import {
+  PUBLIC_ENGLISH_VARIANT,
+  preferredVoiceNames,
+  voicePreference,
+} from "./english";
 
 const VOICE_ORDER = voicePreference(PUBLIC_ENGLISH_VARIANT);
 
@@ -83,30 +87,56 @@ export function setPace(pace: Pace): void {
 /* ------------------------------------------------------- 기기 음성 (대비책) */
 
 /**
- * macOS ships one compact voice per accent and offers better ones as
- * downloads, listed as "Karen (Enhanced)" or "Karen (Premium)" alongside the
- * original. Picking the first match by language would keep choosing the
- * compact one even after the good one is installed — the whole reason this app
- * went looking for a different voice in the first place.
+ * Set NEXT_PUBLIC_SPEECH_VOICE to a name from the browser's own list to pin one
+ * — the only way to override a choice the API gives no other handle on.
  */
-function quality(voice: SpeechSynthesisVoice): number {
-  if (/premium/i.test(voice.name)) return 2;
-  if (/enhanced/i.test(voice.name)) return 1;
-  return 0;
+const NAMED = process.env.NEXT_PUBLIC_SPEECH_VOICE?.trim();
+
+function byName(
+  voices: SpeechSynthesisVoice[],
+  name: string,
+): SpeechSynthesisVoice | undefined {
+  return voices.find((v) => v.name.toLowerCase().startsWith(name.toLowerCase()));
 }
 
+function inAccent(voice: SpeechSynthesisVoice): boolean {
+  const lang = voice.lang.replace("_", "-");
+  return VOICE_ORDER.some((tag) => lang.startsWith(tag));
+}
+
+/**
+ * Pinned name, then the machine's own choice, then a known modern voice, then
+ * anything in the right accent.
+ *
+ * The second step is the one that matters. Matching on "(Premium)" does not
+ * work — see `preferredVoiceNames` — but the voice flagged `default` is the one
+ * chosen in System Settings › Spoken Content › System Voice, and that flag does
+ * tell the two Karens apart (measured 2026-08-13: the upgraded one came back
+ * `default: true`, the compact one `false`). Someone who went and installed a
+ * better voice has already said which one they want; the app should not argue.
+ */
 function pickVoice(): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
   if (voices.length === 0) return null;
+
+  if (NAMED) {
+    const pinned = byName(voices, NAMED);
+    if (pinned) return pinned;
+  }
+
+  // Only when it speaks the variety being taught — a US system voice must not
+  // override Australian English (rule 6).
+  const chosen = voices.find((v) => v.default && inAccent(v));
+  if (chosen) return chosen;
+
+  for (const name of preferredVoiceNames(PUBLIC_ENGLISH_VARIANT)) {
+    const hit = byName(voices, name);
+    if (hit) return hit;
+  }
+
   for (const tag of VOICE_ORDER) {
-    const matches = voices.filter((v) =>
-      v.lang.replace("_", "-").startsWith(tag),
-    );
-    if (matches.length > 0) {
-      return matches.reduce((best, v) =>
-        quality(v) > quality(best) ? v : best,
-      );
-    }
+    const hit = voices.find((v) => v.lang.replace("_", "-").startsWith(tag));
+    if (hit) return hit;
   }
   return null;
 }
