@@ -329,6 +329,7 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
         sessionId: null,
         topic,
         question: prompt.question,
+        meaning: prompt.meaning,
         hints: prompt.hints,
         answer,
         words,
@@ -397,7 +398,11 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
           ref={i === turns.length - 1 ? lastTurnRef : undefined}
           className="mb-14 space-y-3 scroll-mt-6"
         >
-          <AskedQuestion question={turn.question} index={i + 1} />
+          <AskedQuestion
+            question={turn.question}
+            meaning={turn.meaning}
+            index={i + 1}
+          />
           <YourAnswer text={turn.answer} words={turn.words} />
           {turn.feedback ? (
             <FeedbackView
@@ -430,6 +435,7 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
           <div className="space-y-3">
             <AskedQuestion
               question={prompt.question}
+              meaning={prompt.meaning}
               index={turns.length + 1}
               live
             />
@@ -482,13 +488,17 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
 
 function AskedQuestion({
   question,
+  meaning,
   index,
   live = false,
 }: {
   question: string;
+  meaning?: string;
   index: number;
   live?: boolean;
 }) {
+  const [shown, setShown] = useState(false);
+
   return (
     <div className="animate-rise">
       <p className="text-[13px] tabular-nums text-faint">
@@ -498,6 +508,20 @@ function AskedQuestion({
       <p className="mt-1.5 text-[22px] font-semibold leading-snug text-ink sm:text-[26px]">
         {question}
       </p>
+      {meaning ? (
+        shown ? (
+          <p className="ko mt-2 text-[15px] leading-relaxed text-muted">
+            {meaning}
+          </p>
+        ) : (
+          <button
+            onClick={() => setShown(true)}
+            className="ko mt-2 text-[13px] text-faint underline-offset-4 transition-colors hover:text-body hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            무슨 뜻이죠?
+          </button>
+        )
+      ) : null}
     </div>
   );
 }

@@ -38,6 +38,8 @@ export interface MistakePattern {
 
 export interface FollowUp {
   question: string;
+  /** The same question in Korean, revealed only on request (§5.18). */
+  meaning: string;
   hints: string[];
 }
 
@@ -54,6 +56,8 @@ export interface Feedback {
 
 export interface Prompt {
   question: string;
+  /** The same question in Korean, revealed only on request (§5.18). */
+  meaning: string;
   hints: string[];
 }
 
@@ -63,6 +67,8 @@ export interface Turn {
   sessionId: number | null;
   topic: string;
   question: string;
+  /** The Korean gloss shown on request; not persisted, so past days lack it. */
+  meaning: string;
   hints: string[];
   answer: string;
   words: number;

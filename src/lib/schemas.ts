@@ -8,13 +8,23 @@ const hints = {
   items: { type: "string" },
 } as const;
 
+/**
+ * The question in Korean, for the learner who cannot parse the English one.
+ *
+ * It rides along in the call that writes the question rather than being a
+ * lookup of its own, so the escape hatch costs no requests — which is what made
+ * it affordable at all on a metered key.
+ */
+const meaning = { type: "string" } as const;
+
 export const PROMPT_SCHEMA = {
   type: "object",
   properties: {
     question: { type: "string" },
+    meaning,
     hints,
   },
-  required: ["question", "hints"],
+  required: ["question", "meaning", "hints"],
   additionalProperties: false,
 } as Record<string, unknown>;
 
@@ -87,9 +97,10 @@ function feedbackSchema(mode: Mode): Record<string, unknown> {
         type: "object",
         properties: {
           question: { type: "string" },
+          meaning,
           hints,
         },
-        required: ["question", "hints"],
+        required: ["question", "meaning", "hints"],
         additionalProperties: false,
       },
       level: { type: "string", enum: ["A2", "B1", "B2", "C1"] },

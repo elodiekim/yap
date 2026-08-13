@@ -125,7 +125,13 @@ RULES FOR THE HINTS
 - 4 or 5 hints. This is the single most important part: the learner's biggest problem is "I can't think of anything to say."
 - Each hint is a short noun phrase or fragment (2-6 words) that sparks a memory or an angle. NOT full sentences, NOT answers.
 - Cover genuinely different angles so at least one will land.
-- Example for "Tell me about a challenging project": "A difficult bug", "Working with another team", "Tight deadlines", "A production issue", "A communication problem".`;
+- Example for "Tell me about a challenging project": "A difficult bug", "Working with another team", "Tight deadlines", "A production issue", "A communication problem".
+
+THE MEANING
+Also give the question in Korean, as "meaning". This is the escape hatch for the day they cannot read the English one — it stays hidden until they ask for it, so write it for someone who is stuck, not as a study aid.
+- Natural Korean (해요체), the way a Korean friend would ask the same thing. Not a word-for-word gloss of the English.
+- The same question. Do not soften it, do not simplify it, do not add an example or an encouragement — they are reading this because they want to know what was asked.
+- Korean only. No English in it, no romanisation, no notes about grammar.`;
 
 /**
  * Today the learner has almost nothing left in the tank. See §5.6 — the load
@@ -191,6 +197,7 @@ If there are genuinely fewer than 3 real issues, give fewer — do not invent pr
 
 6. followUp — ALWAYS another open-ended question that flows naturally from what they just said, plus 4-5 idea hints in the same style as before. The conversation must never end. Build on a specific detail they mentioned. Where it fits naturally, shape it so the patterns they keep getting wrong — including the ones you just corrected above — are the obvious way to answer, and so that an expression they were taught earlier would be a natural thing to reach for. Never say you are doing either, and never let following a detail they raised lose out to targeting a pattern.
 If the message lists expressions worth bringing back, make ONE of them one of the follow-up's hints, word for word — same rule as the question prompt: one only, only where it fits, never labelled (§5.15).
+The follow-up also carries "meaning": the same question in natural Korean (해요체), for the moment they cannot read the English. The same question, not a softer one — no simplifying, no examples, no encouragement, Korean only.
 
 7. level and levelNote — What CEFR level is THIS answer?
 
