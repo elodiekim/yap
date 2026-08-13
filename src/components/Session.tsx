@@ -434,6 +434,11 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
         ) : prompt ? (
           <div className="space-y-3">
             <AskedQuestion
+              // Without a key this slot keeps the same component instance from
+              // question to question, so opening the Korean once left every
+              // later question opened before it was read. Each question is a
+              // fresh decision about whether the English landed.
+              key={turns.length}
               question={prompt.question}
               meaning={prompt.meaning}
               index={turns.length + 1}
