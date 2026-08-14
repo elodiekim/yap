@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { friendlyError } from "@/lib/llm";
 import { logUsage } from "@/lib/repo";
 import { today } from "@/lib/stats";
-import { speakServerSide } from "@/lib/tts";
+import { serverVoiceEnabled, speakServerSide } from "@/lib/tts";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -10,17 +10,9 @@ export const maxDuration = 60;
 /** A shadowing line or an expression. Anything longer is not this feature. */
 const TEXT_MAX = 400;
 
-/**
- * Set TTS=system in .env.local to go back to the browser's own voice and stop
- * spending requests on audio.
- */
-function serverSideVoice(): boolean {
-  return process.env.TTS !== "system";
-}
-
 export async function POST(req: Request) {
   try {
-    if (!serverSideVoice()) {
+    if (!serverVoiceEnabled()) {
       return NextResponse.json({ error: "기기 음성을 쓰도록 설정돼 있어요." }, { status: 501 });
     }
 

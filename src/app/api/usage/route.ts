@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { dailyRequestLimit } from "@/lib/pricing";
 import { readUsage, speakRequestsToday } from "@/lib/repo";
-import { TTS_MODEL, voiceDailyLimit } from "@/lib/tts";
+import { TTS_MODEL, serverVoiceEnabled, voiceDailyLimit } from "@/lib/tts";
 import type { UsageReport } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -12,6 +12,12 @@ export const runtime = "nodejs";
  * one number would hide whichever ran out.
  */
 function voiceBudget(): UsageReport["voice"] {
+  // With TTS=system the device reads every line, so there is no allowance to
+  // report. Drawing "0 of 10 used" would advertise a budget that is not in
+  // play — the same kind of lie as telling someone the device voice stood in
+  // for a limit they never reached.
+  if (!serverVoiceEnabled()) return { used: 0, limit: null, spare: 0 };
+
   const byModel = speakRequestsToday();
   const used = byModel[TTS_MODEL] ?? 0;
   const spare = Object.entries(byModel)

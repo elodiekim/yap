@@ -72,6 +72,17 @@ const CEILINGS: Record<string, Ceiling> = {
  */
 const REQUEST_TIMEOUT_MS = 20_000;
 
+/**
+ * Whether audio comes from Gemini at all. `TTS=system` in .env.local hands the
+ * reading to the device voice, which costs nothing and has no ceiling.
+ *
+ * Both the route that generates audio and the card that reports the budget ask
+ * here, so the two can never disagree about which voice is in use.
+ */
+export function serverVoiceEnabled(): boolean {
+  return process.env.TTS !== "system";
+}
+
 /** The preferred voice's daily allowance, for the usage card. Null if unknown. */
 export function voiceDailyLimit(): number | null {
   return CEILINGS[TTS_MODEL]?.perDay ?? null;
