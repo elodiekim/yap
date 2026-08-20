@@ -6,7 +6,7 @@ import { tagLabel } from "@/lib/tags";
 import {
   levelProgress,
   recurrenceTrend,
-  streakInfo,
+  rhythm,
   wordsToday,
 } from "@/lib/store";
 import { Card, SectionLabel } from "./ui";
@@ -22,42 +22,38 @@ const LINE = "#14776a";
 const RAMP = ["#cfe6e0", "#9bcdc2", "#5fa697", "#1f6f60"];
 
 export function Dashboard({ profile }: { profile: Profile }) {
-  const chain = streakInfo(profile.days);
+  const pace = rhythm(profile.days);
   const trend = useMemo(() => recurrenceTrend(profile), [profile]);
-  // A broken chain is the moment people stop coming back, so the line under
-  // the grid leads with the number that never goes down (spec §2).
-  const broken = chain.days === 0 && profile.days.length > 0;
+  // Nothing breaks any more, but a month away still needs a way back in.
+  const away = pace.days === 0 && profile.days.length > 0;
 
   return (
     <div className="space-y-3">
       <Card className="p-5">
         <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4">
           <Stat
-            value={chain.days}
-            unit="일"
-            label="연속 학습"
-            accent={chain.days > 0}
+            value={pace.days}
+            unit={`/ ${pace.of}일`}
+            label="최근 한 달"
+            accent={pace.days > 0}
           />
           <Stat value={profile.days.length} unit="일" label="총 학습일" />
           <Stat value={profile.totalConversations} unit="회" label="대화" />
           <Stat value={profile.vocab.length} unit="개" label="배운 표현" />
         </div>
         <p className="ko mt-5 border-t border-hair pt-4 text-[13px] text-muted">
-          {broken ? (
+          {away ? (
             <>
               지금까지{" "}
               <span className="font-semibold text-ink">
                 {profile.days.length}일
               </span>{" "}
-              연습했어요. 오늘 한 문장이면 다시 이어집니다.
+              연습했어요. 오늘 한 문장이면 다시 쌓이기 시작합니다.
             </>
           ) : (
             <>
               누적 {profile.totalWords.toLocaleString()}단어 · 오늘{" "}
               {wordsToday(profile)}단어
-              {chain.rests > 0 ? (
-                <span className="text-faint"> · 쉬는 날 {chain.rests}</span>
-              ) : null}
             </>
           )}
         </p>
@@ -317,11 +313,11 @@ function Recurrence({ trend }: { trend: { date: string; rate: number }[] }) {
 
 const BADGE_LABELS: Record<string, string> = {
   "first-yap": "첫 대화",
-  "streak-3": "3일 연속",
-  "streak-7": "7일 연속",
-  "streak-14": "14일 연속",
-  "streak-30": "30일 연속",
-  "streak-100": "100일 연속",
+  "streak-3": "30일 중 3일",
+  "streak-7": "30일 중 7일",
+  "streak-14": "30일 중 14일",
+  "streak-21": "30일 중 21일",
+  "streak-30": "30일 내내",
   "talks-10": "대화 10회",
   "talks-25": "대화 25회",
   "talks-50": "대화 50회",

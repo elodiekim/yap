@@ -2,7 +2,7 @@
 
 import { TOPICS } from "@/lib/topics";
 import type { Mode, Profile } from "@/lib/types";
-import { pickStaleTopic, streak, type Badge } from "@/lib/store";
+import { pickStaleTopic, rhythm, type Badge } from "@/lib/store";
 import { About } from "./About";
 import { Dashboard } from "./Dashboard";
 import { Pending } from "./Pending";
@@ -26,7 +26,7 @@ export function Home({
   onBadges: (b: Badge[]) => void;
   onReset: () => void;
 }) {
-  const s = streak(profile.days);
+  const pace = rhythm(profile.days);
   const fresh = profile.totalConversations === 0;
 
   return (
@@ -45,7 +45,11 @@ export function Home({
         </p>
         <div className="mt-6 flex min-h-[20px] flex-wrap items-center gap-x-4 gap-y-1">
           <Meta>레벨 {profile.level}</Meta>
-          {s > 0 ? <Meta accent>{s}일 연속</Meta> : null}
+          {pace.days > 0 ? (
+            <Meta accent>
+              최근 {pace.of}일 중 {pace.days}일
+            </Meta>
+          ) : null}
           {profile.totalConversations > 0 ? (
             <Meta>대화 {profile.totalConversations}회</Meta>
           ) : null}

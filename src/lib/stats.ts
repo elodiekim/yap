@@ -16,81 +16,60 @@ function isoDate(d: Date): string {
   ).padStart(2, "0")}`;
 }
 
-function dayBefore(iso: string): string {
-  const d = new Date(`${iso}T00:00:00`);
-  d.setDate(d.getDate() - 1);
-  return isoDate(d);
-}
-
 export function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
-/** How many rest days a 30-day span may absorb before the chain breaks. */
-const RESTS_PER_MONTH = 2;
-const REST_WINDOW = 30;
+/** The trailing span the rhythm is measured over. */
+export const RHYTHM_WINDOW = 30;
 
-function daysBetween(a: string, b: string): number {
-  const ms =
-    new Date(`${a}T00:00:00`).getTime() - new Date(`${b}T00:00:00`).getTime();
-  return Math.round(ms / 86_400_000);
-}
-
-export interface Streak {
-  /** Days practised in the current chain. Rest days are not counted. */
+export interface Rhythm {
+  /** Days practised inside the window, including today. */
   days: number;
-  /** Missed days the chain absorbed — shown so the number isn't a lie. */
-  rests: number;
+  /** The window, so no caller hardcodes 30. */
+  of: number;
 }
 
 /**
- * The chain, ending today (or yesterday, if today isn't done yet).
+ * How many of the last 30 days were practised.
  *
- * A single missed day is bridged rather than fatal: the common failure is one
- * late night or one bad cold, and losing a month over it is what stops people
- * coming back at all. Two missed days in a row is a real gap and does break it.
+ * This replaced a consecutive-day chain with two bridged rest days per month,
+ * and it was replaced because **the chain went down on days the learner turned
+ * up.** Measured 2026-08-21 on real data:
  *
- * Bridges are capped at two per 30-day span so the chain cannot quietly become
- * an every-other-day habit while still calling itself a daily streak. Nothing
- * is stored — this is derived from the practised dates each time.
+ *   08-07  not practised   10 days
+ *   08-08  PRACTISED        7 days
+ *   08-17  not practised   15 days
+ *   08-18  PRACTISED       11 days
+ *
+ * The rest allowance slides on a 30-day window, so spending a new rest could
+ * push an older one out of reach and retroactively cut the chain behind it.
+ * The learner did nothing wrong on either of those days — they showed up and
+ * the only number the app uses to say "keep going" fell by three or four.
+ * §5.7 exists to stop exactly that, and the chain was doing it.
+ *
+ * The deeper mismatch: the chain assumed daily with the odd slip, and allowed
+ * two rests per 30 days — effectively demanding 28 of 30. The real rhythm is 21
+ * of 30, a session every 1.4 days. That is a good habit that the chain was
+ * obliged to keep calling a failure.
+ *
+ * A rolling count cannot break, cannot be retroactively cut, and cannot fall on
+ * a day that was practised. It goes down only when a practised day ages out of
+ * the window, which is true and is the point. This is not §5.7's rejected
+ * "weekly target" — there is no target to miss.
  */
-export function streakInfo(days: string[]): Streak {
-  if (days.length === 0) return { days: 0, rests: 0 };
+export function rhythm(days: string[], on: string = today()): Rhythm {
+  const first = new Date(`${on}T00:00:00`);
+  first.setDate(first.getDate() - (RHYTHM_WINDOW - 1));
+  const from = isoDate(first);
 
-  const set = new Set(days);
-  let cursor = today();
-  if (!set.has(cursor)) {
-    cursor = dayBefore(cursor);
-    // Missing both today and yesterday is already two days: nothing to bridge.
-    if (!set.has(cursor)) return { days: 0, rests: 0 };
-  }
-
-  let counted = 0;
-  const rests: string[] = [];
-
-  for (;;) {
-    if (set.has(cursor)) {
-      counted += 1;
-      cursor = dayBefore(cursor);
-      continue;
-    }
-
-    // A gap. It can only be bridged if it is exactly one day long, the day
-    // before it was practised, and this 30-day span has rests left.
-    const before = dayBefore(cursor);
-    const spent = rests.filter((r) => daysBetween(r, cursor) < REST_WINDOW);
-    if (!set.has(before) || spent.length >= RESTS_PER_MONTH) break;
-
-    rests.push(cursor);
-    cursor = before;
-  }
-
-  return { days: counted, rests: rests.length };
+  const counted = new Set(days.filter((d) => d >= from && d <= on));
+  return { days: counted.size, of: RHYTHM_WINDOW };
 }
 
-/** Just the number, for the places that only show the chain. */
+/** Just the number, for the places that only show the count. */
 export function streak(days: string[]): number {
-  return streakInfo(days).days;
+  return rhythm(days).days;
 }
 
 export function wordsToday(profile: Profile): number {
@@ -251,9 +230,16 @@ export function newBadges(
     if (!before.badges.includes(id)) earned.push({ id, emoji, label });
   };
 
-  const s = streak(after.days);
-  for (const milestone of [3, 7, 14, 30, 100]) {
-    if (s >= milestone) push(`streak-${milestone}`, "🔥", `${milestone}일 연속`);
+  // Milestones stop at the window: 100 consecutive days was reachable when this
+  // counted a chain, and is not when it counts days inside a month. The ids keep
+  // their `streak-` prefix so already-earned rows survive the change of meaning,
+  // and nothing is falsely claimed — anyone who held a 14-day chain also had 14
+  // days inside the month it sat in.
+  const practised = rhythm(after.days);
+  for (const milestone of [3, 7, 14, 21, 30]) {
+    if (practised.days >= milestone) {
+      push(`streak-${milestone}`, "🔥", `${RHYTHM_WINDOW}일 중 ${milestone}일`);
+    }
   }
 
   if (after.totalConversations >= 1) push("first-yap", "🌱", "첫 대화");

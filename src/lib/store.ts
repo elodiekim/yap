@@ -16,7 +16,7 @@ export {
   stalestTopics,
   recurrenceTrend,
   streak,
-  streakInfo,
+  rhythm,
   today,
   wordsToday,
   type Badge,
