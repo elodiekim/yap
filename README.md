@@ -214,12 +214,18 @@ YAP_BACKUP=/Users/사용자명/Library/Mobile Documents/com~apple~CloudDocs/yap-
 
 ### 영어 변종 (호주·뉴질랜드 / 미국)
 
-가르치는 영어의 종류를 고를 수 있습니다. 두 줄을 같은 값으로 맞추세요.
+가르치는 영어의 종류를 고를 수 있습니다. 보통은 두 줄을 같은 값으로 맞추면 됩니다.
 
 ```
-ENGLISH_VARIANT=anz              # anz(기본) | nz | au | us
-NEXT_PUBLIC_ENGLISH_VARIANT=anz  # 쉐도잉 음성 선택용
+ENGLISH_VARIANT=anz              # anz(기본) | nz | au | us — 문법·어휘·표현
+NEXT_PUBLIC_ENGLISH_VARIANT=anz  # 쉐도잉 음성 선택용 — 발음만
 ```
+
+**둘을 다르게 둬도 됩니다.** 예를 들어 `ENGLISH_VARIANT=us` + `NEXT_PUBLIC_ENGLISH_VARIANT=nz`면
+표현·문법은 흔히 쓰는 미국식으로 배우고, 발음만 뉴질랜드 억양으로 듣습니다. 실제로 한 사용자가
+이 조합을 씁니다 — 뉴질랜드 콘텐츠는 어휘가 너무 로컬해서 "common"한 게 잘 안 나온다고 판단해
+콘텐츠는 미국식으로 바꾸고, 발음은 원래 듣던 뉴질랜드 쪽을 유지하기로 했습니다
+(2026-08-23). 코드가 애초에 이 둘을 별개 변수로 나눠둔 이유이기도 합니다.
 
 | 값 | 가르치는 영어 |
 |---|---|
