@@ -148,5 +148,9 @@
         프로퍼티**로 컴파일한다. `transition-[transform,…]`으로 쓰면 조용히 안 움직임
 - [ ] (선택, 파급 범위 큼) 헤딩 letter-spacing을 크기별로 스케일 — 지금은 전 크기 고정값
       (`src/app/globals.css:54`)
+- [x] 답변 제출 후 스크롤이 어색함 (2026-08-24). 헤드리스 크롬 실측: `scrollIntoView`의
+      네이티브 smooth가 ~600ms 뭉근한 감속, 앱 모션(`animate-rise`)은 320ms의 짧고 정갈한
+      곡선. 서로 다른 두 모션이 동시에 도는 게 원인이었음. `instant`로 바꿔서 페이지 이동은
+      한 프레임에 끝내고, 피드백 카드가 뜨는 기존 모션 하나만 남김 (`Session.tsx`)
 - 보류: backdrop-blur 확장 금지 — 현재 `page.tsx:76` 한 곳만 절제되게 쓰는 중이고,
   늘리면 AGENTS.md가 명시한 "두 번 거부당한 글래스모피즘"과 충돌

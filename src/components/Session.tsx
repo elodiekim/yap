@@ -370,9 +370,17 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
 
   // Land on the feedback that was just written, not the next question —
   // jumping straight to the live prompt skipped past it entirely.
+  //
+  // Not `behavior: "smooth"`. Measured in headless Chrome: the native smooth
+  // scroll takes ~600ms with a long, mushy deceleration, against the app's own
+  // motion of 220-320ms and a snappy custom curve (globals.css: "quiet, short,
+  // no bounce"). Running both at once — the feedback card rising in on its own
+  // curve while the page glides underneath on a slower, different one — is
+  // what read as the awkward slide. An instant jump plus the card's existing
+  // animate-rise gives one motion instead of two fighting ones.
   useEffect(() => {
     if (turns.length > 0) {
-      lastTurnRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      lastTurnRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
     }
   }, [turns.length]);
 
