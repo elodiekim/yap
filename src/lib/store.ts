@@ -156,6 +156,13 @@ export async function dismissMistake(
   return data.feedback as Feedback;
 }
 
+/** The learner removing something Yap auto-remembered (§5.20). */
+export async function dismissLifeNote(id: number): Promise<void> {
+  const res = await fetch(`/api/life-notes/${id}`, { method: "POST" });
+  if (!res.ok) throw new Error("지우지 못했어요.");
+  setProfile((await res.json()).profile as Profile);
+}
+
 export async function fetchPending(): Promise<PendingAnswer | null> {
   const res = await fetch("/api/pending");
   if (!res.ok) return null;

@@ -8,6 +8,7 @@ import {
   type ExpressionEntry,
   type Feedback,
   type Level,
+  type LifeNote,
   type Mode,
   type PendingAnswer,
   type Profile,
@@ -174,10 +175,20 @@ export function readProfile(): Profile {
       .all() as unknown as { badge_id: string }[]
   ).map((r) => r.badge_id);
 
+  const lifeNotes = conn
+    .prepare(
+      `select id, note, created_at from life_notes
+       where dismissed_at is null order by id`,
+    )
+    .all() as unknown as { id: number; note: string; created_at: string }[];
+
   return {
     level: meta?.level ?? EMPTY_PROFILE.level,
     about: meta?.about ?? "",
     vocab,
+    lifeNotes: lifeNotes.map(
+      (r): LifeNote => ({ id: r.id, note: r.note, createdAt: r.created_at }),
+    ),
     mistakePatterns: mistakePatterns.map((r) => ({
       tag: r.tag,
       count: Number(r.count),
@@ -248,6 +259,13 @@ function recordFeedback(sessionId: number, feedback: Feedback, easy: boolean) {
   );
   for (const e of feedback.expressions) {
     addExpression.run(sessionId, e.phrase, e.meaning, e.example);
+  }
+
+  const addNote = conn.prepare(
+    `insert into life_notes (session_id, note) values (?, ?)`,
+  );
+  for (const n of feedback.lifeNotes) {
+    addNote.run(sessionId, n);
   }
 
   if (!easy) {
@@ -423,6 +441,18 @@ export function dismissMistake(
 
     return feedback;
   });
+}
+
+/**
+ * The learner saying a remembered fact is wrong, stale or not worth keeping
+ * (§5.20) — same shape as `dismissMistake`, but simpler: a life note is not
+ * embedded in any session's stored feedback JSON, so there is no blob to
+ * rewrite, just the one row.
+ */
+export function dismissLifeNote(id: number): void {
+  db()
+    .prepare("update life_notes set dismissed_at = datetime('now') where id = ?")
+    .run(id);
 }
 
 function award(before: Profile, after: Profile, feedback: Feedback | null) {

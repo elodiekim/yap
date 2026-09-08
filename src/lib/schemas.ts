@@ -105,6 +105,13 @@ function feedbackSchema(mode: Mode): Record<string, unknown> {
       },
       level: { type: "string", enum: ["A2", "B1", "B2", "C1"] },
       levelNote: { type: "string" },
+      // No minItems: almost every answer produces none. See §5.20 for why this
+      // is separate from `expressions`, which is forced to exactly 3.
+      lifeNotes: {
+        type: "array",
+        maxItems: 2,
+        items: { type: "string" },
+      },
     },
     required: [
       "praise",
@@ -115,6 +122,7 @@ function feedbackSchema(mode: Mode): Record<string, unknown> {
       "followUp",
       "level",
       "levelNote",
+      "lifeNotes",
     ],
     additionalProperties: false,
   };

@@ -52,6 +52,15 @@ export interface Feedback {
   followUp: FollowUp;
   level: Level;
   levelNote: string;
+  /** Durable facts this answer revealed — usually empty (§5.20). */
+  lifeNotes: string[];
+}
+
+/** One durable fact learned from an answer, in Korean, fed into future prompts. */
+export interface LifeNote {
+  id: number;
+  note: string;
+  createdAt: string;
 }
 
 export interface Prompt {
@@ -167,6 +176,8 @@ export interface Profile {
   about: string;
   /** Expressions already taught — never teach the same one twice. */
   vocab: Expression[];
+  /** Durable facts the learner's answers revealed, oldest first (§5.20). */
+  lifeNotes: LifeNote[];
   /** Recently recurring error patterns, most frequent first. */
   mistakePatterns: MistakePattern[];
   topicsPracticed: string[];
@@ -198,6 +209,7 @@ export const EMPTY_PROFILE: Profile = {
   level: "B1",
   about: "",
   vocab: [],
+  lifeNotes: [],
   mistakePatterns: [],
   topicsPracticed: [],
   topicLastUsed: {},

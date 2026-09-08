@@ -61,6 +61,19 @@ create table if not exists mistakes (
 );
 create index if not exists mistakes_tag on mistakes (tag);
 
+-- Durable facts the learner's own answers revealed — a decision, a change, an
+-- event — as opposed to \`profile.about\`, which they write themselves and
+-- which only updates when they remember to. Fed into every future prompt like
+-- \`about\` is (§5.20). Soft-deleted like mistakes: the learner can say a note
+-- was wrong or not worth keeping, without losing the record that it happened.
+create table if not exists life_notes (
+  id           integer primary key autoincrement,
+  session_id   integer references sessions(id) on delete set null,
+  note         text not null,
+  created_at   text not null default (datetime('now')),
+  dismissed_at text
+);
+
 create table if not exists badges (
   badge_id   text primary key,
   earned_at  text not null default (datetime('now'))

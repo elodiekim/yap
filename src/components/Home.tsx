@@ -5,6 +5,7 @@ import type { Mode, Profile } from "@/lib/types";
 import { pickStaleTopic, rhythm, type Badge } from "@/lib/store";
 import { About } from "./About";
 import { Dashboard } from "./Dashboard";
+import { LifeNotes } from "./LifeNotes";
 import { Pending } from "./Pending";
 import { Usage } from "./Usage";
 import { Button, Card, Meta } from "./ui";
@@ -144,6 +145,11 @@ export function Home({
             </div>
           </div>
           <About value={profile.about} />
+          {profile.lifeNotes.length > 0 ? (
+            <div className="mt-3">
+              <LifeNotes notes={profile.lifeNotes} />
+            </div>
+          ) : null}
           <div className="mt-3">
             <Dashboard profile={profile} />
           </div>

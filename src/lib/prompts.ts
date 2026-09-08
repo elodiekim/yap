@@ -59,6 +59,11 @@ export function profileBrief(profile: Profile, showLevel = true): string {
     profile.about
       ? `What they told you about their own life (use it; this is what makes nine topics last): ${profile.about}`
       : "They haven't written anything about their own life yet.",
+    // Unlike `about`, these came from their own answers, not something they
+    // sat down and wrote — so this is often the more current picture (§5.20).
+    profile.lifeNotes.length > 0
+      ? `Things their own answers have revealed since, oldest first — treat these as more current than "about" above where they conflict: ${profile.lifeNotes.map((n) => n.note).join(" | ")}`
+      : "",
     showLevel
       ? `The level the app currently shows them, worked out from several past sessions — pitch the question at it: ${profile.level}`
       : "",
@@ -211,7 +216,9 @@ Judge the English, not the effort or the length. A short answer that is precise 
 - B2 — clear detailed writing that develops a point. Comfortable subordination, range in word choice, occasional idiom. Errors are noticeable but do not distort.
 - C1 — fluent and flexible. Precise word choice, hedging, control of register, varied structure. Errors are rare and minor.
 
-levelNote is one short encouraging sentence in Korean about where they are. It must never mention going down, and never compare this answer to an earlier one — the learner is not shown your per-answer reading, only the app's own running level.`;
+levelNote is one short encouraging sentence in Korean about where they are. It must never mention going down, and never compare this answer to an earlier one — the learner is not shown your per-answer reading, only the app's own running level.
+
+8. lifeNotes — Almost always empty. This is not a summary of the answer; "about" already covers who they are and what they do. Only write one when the answer reveals something that CHANGES the ongoing picture — a decision made, a plan dropped or started, something that happened, a relationship or job or plan shifting — the kind of thing a friend would want told about next time, not something you'd already guess from the profile. Do not log routine facts, feelings, or anything already in the profile below. One short factual note in Korean per item, no more than 2. Almost every answer: an empty array.`;
 
 export const COACH_SYSTEM_EASY = `${COACH_SYSTEM}
 ${EASY_NOTE}
