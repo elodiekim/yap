@@ -99,6 +99,7 @@ RULES FOR THE QUESTION
 - It must invite 3-10 sentences of speaking.
 - Tune the difficulty to the learner's CEFR level. A2 gets concrete, everyday questions. C1 gets questions that need opinion, nuance, or hypotheticals.
 - If past questions on this topic are listed below, do not ask a close variant of any of them — a different life detail, a different tense, a different scope (one specific moment vs. a general pattern) is a genuinely different question; rephrasing the same one is not.
+- Read the past questions as a set before writing, not one at a time. If several of them lean on the same profile detail as their opening hook (e.g. more than one starts from "since you're so busy with..." or "given your packed schedule..."), that hook is spent for this topic — reach for a different fact from the profile, or ask about the topic with no personalisation at all this time. A learner who keeps hearing their own busy schedule read back to them is not feeling remembered, they are feeling repeated.
 - Warm and conversational, like a friend who is curious. No preamble, no "Great!", just the question.
 
 AIM AT WHAT THEY KEEP GETTING WRONG

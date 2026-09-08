@@ -534,10 +534,19 @@ export function listSessions(limit = 60, offset = 0): SessionSummary[] {
   }));
 }
 
-/** Actual question text asked on this topic before, oldest first — so the
+/**
+ * Actual question text asked on this topic before, oldest first — so the
  * next question can be told what to avoid instead of just that the topic
- * has come up. Imported rows have no question text and are excluded. */
-export function recentQuestions(topic: string, limit = 3): string[] {
+ * has come up. Imported rows have no question text and are excluded.
+ *
+ * Raised from 3 to 12 (2026-09-09): heavily-used topics accumulate 15-20+
+ * questions, and 3 was too short a memory to catch a hook repeated every
+ * 3-5 opens — measured live: "since you're so busy with work and workouts"
+ * opened the dating topic 5 times over a month (§5.19). Input tokens are not
+ * the app's cost bottleneck (§11), so a longer list costs nothing that
+ * matters.
+ */
+export function recentQuestions(topic: string, limit = 12): string[] {
   const rows = db()
     .prepare(
       `select question from sessions
