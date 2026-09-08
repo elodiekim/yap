@@ -25,20 +25,27 @@ function gemini(): GoogleGenAI {
 export async function generateJSONWithGemini<T>(
   opts: GenerateOptions,
 ): Promise<Generated<T>> {
-  const interaction = await gemini().interactions.create({
-    model: GEMINI_MODEL,
-    system_instruction: opts.system,
-    input: opts.user,
-    response_format: {
-      type: "text",
-      mime_type: "application/json",
-      schema: opts.schema,
+  const model = opts.model ?? GEMINI_MODEL;
+  const interaction = await gemini().interactions.create(
+    {
+      model,
+      system_instruction: opts.system,
+      input: opts.user,
+      response_format: {
+        type: "text",
+        mime_type: "application/json",
+        schema: opts.schema,
+      },
+      generation_config: {
+        thinking_level: opts.effort ?? "medium",
+        max_output_tokens: opts.maxTokens ?? 8000,
+      },
     },
-    generation_config: {
-      thinking_level: opts.effort ?? "medium",
-      max_output_tokens: opts.maxTokens ?? 8000,
-    },
-  });
+    // A stronger override model (§5.19) has been measured taking up to ~90s.
+    // The Next.js route's own maxDuration already allows for that; this just
+    // stops the SDK's own default from aborting the wait first.
+    { timeout: 110_000 },
+  );
 
   const text = interaction.output_text;
   if (!text) {
@@ -48,7 +55,9 @@ export async function generateJSONWithGemini<T>(
   // Comes back with the response itself, so recording it costs nothing.
   const u = interaction.usage;
   const usage = {
-    model: GEMINI_MODEL,
+    // The model that actually answered, not the default constant — an
+    // override call must not be logged under the wrong model's price.
+    model,
     inputTokens: Number(u?.total_input_tokens ?? 0),
     outputTokens: Number(u?.total_output_tokens ?? 0),
     thoughtTokens: Number(u?.total_thought_tokens ?? 0),

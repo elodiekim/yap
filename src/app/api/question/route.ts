@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { friendlyError, generateJSON } from "@/lib/llm";
+import { friendlyError, generateJSON, questionModel } from "@/lib/llm";
 import { PROMPT_SCHEMA } from "@/lib/schemas";
 import {
   QUESTION_SYSTEM,
@@ -70,8 +70,12 @@ export async function POST(req: Request) {
       system: easy ? QUESTION_SYSTEM_EASY : QUESTION_SYSTEM,
       user: userParts.join("\n"),
       schema: PROMPT_SCHEMA,
-      effort: "low",
+      // "low" was fast but too shallow to catch a repeated hook across a list
+      // of past questions — that needs a moment to actually compare them, not
+      // just answer. "medium" is what was verified to work (§5.19).
+      effort: "medium",
       maxTokens: 6000,
+      model: questionModel(),
     });
 
     logUsage(body.practisedOn ?? today(), "question", usage);

@@ -177,6 +177,7 @@ YAP_BACKUP=/Users/사용자명/Library/Mobile Documents/com~apple~CloudDocs/yap-
 | `GEMINI_API_KEY` | — | Gemini를 쓸 때 필수 |
 | `ANTHROPIC_API_KEY` | — | Claude를 쓸 때 필수 |
 | `GEMINI_MODEL` | `gemini-3.6-flash` | Pro로 바꾸면 무료 티어를 벗어납니다 |
+| `GEMINI_QUESTION_MODEL` | `gemini-3.6-flash` | 새 토픽을 열 때만 쓰는 모델 ([아래](#새-질문만-다른-모델을-쓰는-이유)) |
 | `ENGLISH_VARIANT` | `anz` | 가르치는 영어의 종류 ([아래](#영어-변종-호주뉴질랜드--미국)) |
 | `NEXT_PUBLIC_ENGLISH_VARIANT` | `anz` | 기기 음성으로 되돌렸을 때 쓰는 값. 위와 같게 |
 | `TTS` | Gemini 음성 | `system`으로 두면 기기에 깔린 음성을 씁니다 ([아래](#읽어주는-목소리)) |
@@ -201,6 +202,18 @@ YAP_BACKUP=/Users/사용자명/Library/Mobile Documents/com~apple~CloudDocs/yap-
 
 > 참고로 `gemini-3.5-flash-lite`는 2026-08 기준 **분당 15회 / 분당 25만 토큰 / 하루 500회**였습니다.
 > 하루 한도보다 **분당 한도에 먼저 걸립니다.**
+
+### 새 질문만 다른 모델을 쓰는 이유
+
+`GEMINI_MODEL`을 가벼운 모델(예: `gemini-3.5-flash-lite`)로 설정해도, **새 토픽을 여는 질문 하나만은**
+`GEMINI_QUESTION_MODEL`(기본 `gemini-3.6-flash`)이 대신 만듭니다. 실측으로 확인한 문제 때문입니다 —
+가벼운 모델은 프로필의 눈에 띄는 디테일(예: "바쁜 일정") 하나를 계속 같은 질문의 서두로 재활용했고,
+과거 질문을 전부 보여줘도, "같은 훅 반복하지 마라"는 규칙을 넣어도 안 고쳐졌습니다. 더 강한 모델로
+바꾸자 바로 고쳐졌습니다 (`docs/product-spec.md` §5.19).
+
+그 대가로 새 질문을 받을 때 몇 초~1분 넘게 걸릴 수 있습니다 — 화면엔 "질문을 만들고 있어요…"가
+뜨는 자리라 기다리는 동안 뭘 하고 있는지는 보입니다. 답변마다 이어지는 후속 질문(대화 중간)은
+그대로 가벼운 모델이 만듭니다. 훅 반복은 새 토픽을 열 때만 일어나는 문제라서입니다.
 
 **요청이 떨어져도 그날 연습은 남습니다.** 채점에 실패하면 쓴 답변이 그대로 저장되고
 (연습한 날·기록에 다 들어갑니다), 피드백은 홈 맨 위 **이어서 하기**에서 나중에 받으면 됩니다.

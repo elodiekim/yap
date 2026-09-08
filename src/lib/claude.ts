@@ -21,8 +21,9 @@ function claude(): Anthropic {
 export async function generateJSONWithClaude<T>(
   opts: GenerateOptions,
 ): Promise<Generated<T>> {
+  const model = opts.model ?? CLAUDE_MODEL;
   const stream = claude().messages.stream({
-    model: CLAUDE_MODEL,
+    model,
     max_tokens: opts.maxTokens ?? 8000,
     system: [
       { type: "text", text: opts.system, cache_control: { type: "ephemeral" } },
@@ -52,7 +53,7 @@ export async function generateJSONWithClaude<T>(
   // Anthropic bills thinking within output_tokens rather than breaking it out,
   // so thoughtTokens stays 0 here and the cost maths still comes out right.
   const usage = {
-    model: CLAUDE_MODEL,
+    model,
     inputTokens: message.usage.input_tokens,
     outputTokens: message.usage.output_tokens,
     thoughtTokens: 0,

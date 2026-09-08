@@ -15,6 +15,8 @@ export interface GenerateOptions {
   schema: Record<string, unknown>;
   effort?: Effort;
   maxTokens?: number;
+  /** Overrides the provider's default model for this one call. */
+  model?: string;
 }
 
 export type Provider = "gemini" | "claude";
@@ -38,6 +40,22 @@ export interface Generated<T> {
 
 export function provider(): Provider {
   return process.env.LLM_PROVIDER === "claude" ? "claude" : "gemini";
+}
+
+/**
+ * A stronger model for the one route that needed it: opening a new question
+ * on a topic that already has a lot of history.
+ *
+ * Verified live, 2026-09-09 (§5.19): the default model kept reaching for the
+ * same profile detail ("since you're so busy...") to open a topic, five times
+ * over a month on one topic. Neither a full question history nor an explicit
+ * rule against it fixed that on the default model — only a stronger one did.
+ * Claude has no second tier configured in this app to step up to, so this is
+ * a no-op there.
+ */
+export function questionModel(): string | undefined {
+  if (provider() !== "gemini") return undefined;
+  return process.env.GEMINI_QUESTION_MODEL ?? "gemini-3.6-flash";
 }
 
 export async function generateJSON<T>(
