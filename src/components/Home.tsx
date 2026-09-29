@@ -110,7 +110,7 @@ export function Home({
                       ) : null}
                     </span>
                     <span className="ko mt-0.5 block text-[13px] text-muted">
-                      {t.ko} · {t.blurb}
+                      {t.blurb}
                     </span>
                   </span>
                 </button>
