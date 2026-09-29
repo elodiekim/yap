@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Feedback, Mode, Profile, Prompt, Turn } from "@/lib/types";
-import { topicLabel } from "@/lib/topics";
+import { topicKo, topicLabel } from "@/lib/topics";
 import {
   countWords,
   gradeSession,
@@ -391,6 +391,7 @@ export function Session({ topic, mode, onBadges, onExit }: Props) {
           <span className="text-[15px] font-semibold text-ink">
             {topicLabel(topic)}
           </span>
+          <span className="ko text-[13px] text-muted">{topicKo(topic)}</span>
           {easy ? <Meta accent>가볍게</Meta> : null}
           {turns.length > 0 ? <Meta>답변 {turns.length}개</Meta> : null}
         </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { speak, speechSupported } from "@/lib/speech";
-import { topicLabel } from "@/lib/topics";
+import { topicKo } from "@/lib/topics";
 import type { ExpressionEntry } from "@/lib/types";
 import { Button, Card, Thinking } from "./ui";
 
@@ -160,7 +160,7 @@ export function Expressions({
                           onClick={() => onOpenSession(e.sessionId!)}
                           className="ko shrink-0 text-[12px] text-muted hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                         >
-                          {e.topic ? topicLabel(e.topic) : "연습"} →
+                          {e.topic ? topicKo(e.topic) : "연습"} →
                         </button>
                       ) : null}
                     </div>

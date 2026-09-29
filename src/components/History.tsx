@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Feedback, SessionDetail, SessionSummary } from "@/lib/types";
-import { topicLabel } from "@/lib/topics";
+import { topicKo, topicLabel } from "@/lib/topics";
 import { gradeSession } from "@/lib/store";
 import { FeedbackView } from "./FeedbackView";
 import { Button, Card, Meta, SectionLabel, Thinking } from "./ui";
@@ -177,6 +177,11 @@ function SessionRow({
       <div className="flex items-center justify-between gap-3">
         <span className="text-[15px] font-semibold text-ink">
           {s.topic ? topicLabel(s.topic) : "기록"}
+          {s.topic ? (
+            <span className="ko ml-2 text-[13px] font-normal text-muted">
+              {topicKo(s.topic)}
+            </span>
+          ) : null}
         </span>
         <span className="ko shrink-0 text-[12px] text-faint">
           {/* "실수 0" on an ungraded answer would read as a flawless one. */}
@@ -313,7 +318,7 @@ function SessionPage({ id, onBack }: { id: number; onBack: () => void }) {
         <div className="mt-5 space-y-3">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <Meta>{pretty(session.practisedOn)}</Meta>
-            {session.topic ? <Meta>{topicLabel(session.topic)}</Meta> : null}
+            {session.topic ? <Meta>{topicKo(session.topic)}</Meta> : null}
             <Meta>{session.wordCount}단어</Meta>
             {session.level ? <Meta accent>{session.level}</Meta> : null}
           </div>

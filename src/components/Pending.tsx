@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchPending, gradeSession, today, type Badge } from "@/lib/store";
-import { topicLabel } from "@/lib/topics";
+import { topicKo, topicLabel } from "@/lib/topics";
 import type { PendingAnswer } from "@/lib/types";
 import { Button, Card, SectionLabel, Thinking } from "./ui";
 
@@ -59,7 +59,7 @@ export function Pending({
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <SectionLabel en="Pick up where you left off" ko="이어서 하기" />
         <span className="ko shrink-0 text-[13px] text-faint">
-          {topicLabel(answer.topic)}
+          {topicLabel(answer.topic)} · {topicKo(answer.topic)}
         </span>
       </div>
       <p className="ko mt-2.5 text-[15px] leading-relaxed text-ink">
