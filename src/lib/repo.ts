@@ -1,3 +1,4 @@
+import type { DatabaseSync } from "node:sqlite";
 import { db, snapshot, tx } from "./db";
 import type { Usage } from "./llm";
 import { costOf, dailyRequestLimit } from "./pricing";
@@ -26,6 +27,78 @@ import {
  */
 
 const CAP = 200; // how much history a Profile carries; the DB keeps everything
+
+/**
+ * How many recent sessions count as "recent" when deciding whether a mistake
+ * is a repeat. See `buildRecurrenceHistory` for why this replaced "ever
+ * before" — matches `LEVEL_WINDOW` in spirit (a handful of recent answers),
+ * but kept as its own constant since the two measure different things and
+ * have no reason to be forced to the same number later.
+ */
+const RECURRENCE_WINDOW = 5;
+
+/**
+ * How much of each session was ground already covered, oldest first.
+ *
+ * A tag counts as a repeat when it also showed up in one of the last
+ * `RECURRENCE_WINDOW` sessions — not "ever before in this tag's whole
+ * lifetime", which is what this used to measure. The old definition only works
+ * while the 27-tag vocabulary is still being discovered: measured live
+ * 2026-10-03, this account had already triggered 22 of the 27 tags at least
+ * once, which made the old recurrence rate climb 54% → 95% → 100% over three
+ * months and then sit at 100% — not because nothing was improving, but
+ * because almost any mistake tag now has *some* earlier occurrence to be a
+ * "repeat" of, forever. The same shape of problem that made the streak go
+ * negative on practised days (§5.7's 2026-08-21 rewrite): a lifetime-scoped
+ * count was always going to saturate; a rolling window cannot.
+ *
+ * Re-simulated against real history before shipping (2026-10-03): a 5-session
+ * window reads 54% → 64% → 68% over the same three months — still elevated,
+ * but with headroom to keep moving, which is the one thing the old version
+ * had permanently lost.
+ *
+ * Sessions with no mistakes are absent rather than zero: recurrence is
+ * undefined when nothing was flagged, and charting it as 0% would read as a
+ * perfect session rather than an empty one.
+ */
+function buildRecurrenceHistory(
+  conn: DatabaseSync,
+): { date: string; total: number; repeats: number }[] {
+  // The window needs the full sequence to judge sessions near the start of the
+  // capped output correctly, so this reads everything and caps after.
+  const rows = conn
+    .prepare(
+      `select m.session_id, s.practised_on as date, m.tag
+       from mistakes m
+       join sessions s on s.id = m.session_id
+       -- A correction the learner threw out must not be the thing that makes
+       -- a later one count as a repeat (§5.12).
+       where m.dismissed_at is null
+       order by m.session_id`,
+    )
+    .all() as unknown as { session_id: number; date: string; tag: string }[];
+
+  const bySession = new Map<number, { date: string; tags: Set<string> }>();
+  for (const r of rows) {
+    const entry = bySession.get(r.session_id) ?? { date: r.date, tags: new Set<string>() };
+    entry.tags.add(r.tag);
+    bySession.set(r.session_id, entry);
+  }
+  const sessions = [...bySession.entries()].sort(([a], [b]) => a - b);
+
+  const history: { date: string; total: number; repeats: number }[] = [];
+  for (let i = 0; i < sessions.length; i++) {
+    const [, current] = sessions[i];
+    const recent = sessions.slice(Math.max(0, i - RECURRENCE_WINDOW), i);
+    const seenRecently = new Set<string>();
+    for (const [, past] of recent) for (const t of past.tags) seenRecently.add(t);
+
+    const repeats = [...current.tags].filter((t) => seenRecently.has(t)).length;
+    history.push({ date: current.date, total: current.tags.size, repeats });
+  }
+
+  return history.slice(-CAP);
+}
 
 export function readProfile(): Profile {
   const conn = db();
@@ -111,37 +184,7 @@ export function readProfile(): Profile {
       .all() as unknown as { date: string; count: number; words: number }[]
   ).reverse();
 
-  // How much of each session was ground already covered. A tag counts as a
-  // repeat when it was first flagged in an *earlier* session, so the very
-  // first appearance of a pattern is never held against the learner.
-  // Sessions with no mistakes are absent rather than zero: recurrence is
-  // undefined when nothing was flagged, and charting it as 0% would read as
-  // a perfect session rather than an empty one.
-  const recurrenceHistory = (
-    conn
-      .prepare(
-        `select s.practised_on as date,
-                count(m.tag) as total,
-                sum(case when f.first_seen < s.id then 1 else 0 end) as repeats
-         from sessions s
-         join mistakes m on m.session_id = s.id and m.dismissed_at is null
-         -- Also filtered here: a correction the learner threw out must not be
-         -- the thing that makes a later one count as a repeat (§5.12).
-         join (select tag, min(session_id) as first_seen
-               from mistakes where dismissed_at is null group by tag)
-           f on f.tag = m.tag
-         group by s.id
-         order by s.id desc
-         limit ${CAP}`,
-      )
-      .all() as unknown as { date: string; total: number; repeats: number }[]
-  )
-    .map((r) => ({
-      date: r.date,
-      total: Number(r.total),
-      repeats: Number(r.repeats),
-    }))
-    .reverse();
+  const recurrenceHistory = buildRecurrenceHistory(conn);
 
   // Only the points where the level actually moved, matching what the old
   // client-side store recorded.

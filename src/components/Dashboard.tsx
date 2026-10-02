@@ -141,11 +141,24 @@ function LevelMeter({ profile }: { profile: Profile }) {
             <span className="text-accent"> · 지금 {gate.reached}회</span>
           ) : null}
         </p>
-      ) : (
+      ) : null}
+      {gate.next && gate.have >= gate.of && gate.reached === 0 ? (
+        // One CEFR band is a genuinely long climb — measured 2026-10-03, this
+        // account went 69 straight answers without a single B2 reading, so
+        // this line sat at "0회" the entire time with nothing to point at
+        // instead. Naming the real pace, and pointing at the thing that does
+        // move week to week, beats leaving a stalled meter to speak for itself.
+        <p className="ko mt-1.5 text-[13px] text-faint">
+          레벨 하나를 넘는 덴 원래 몇 달씩 걸려요. 지금 당장 느는 걸 보고 싶으면
+          아래 &ldquo;같은 실수를 또 하는 비율&rdquo;을 보세요 — 그쪽이 매주
+          움직입니다.
+        </p>
+      ) : null}
+      {!gate.next ? (
         <p className="ko mt-3 text-[13px] text-muted">
           제일 위까지 왔어요. 여기서부터는 레벨 말고 문장으로 늘어요.
         </p>
-      )}
+      ) : null}
       {profile.levelHistory.length > 1 ? (
         <p className="ko mt-1.5 text-[13px] text-faint">
           {profile.levelHistory[0].date}에 {profile.levelHistory[0].level}로
