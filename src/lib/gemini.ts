@@ -41,10 +41,13 @@ export async function generateJSONWithGemini<T>(
         max_output_tokens: opts.maxTokens ?? 8000,
       },
     },
-    // A stronger override model (§5.19) has been measured taking up to ~90s.
-    // The Next.js route's own maxDuration already allows for that; this just
-    // stops the SDK's own default from aborting the wait first.
-    { timeout: 110_000 },
+    {
+      // A stronger override model (§5.19) has been measured taking up to
+      // ~90s. The Next.js route's own maxDuration already allows for that;
+      // this just stops the SDK's own default from aborting the wait first.
+      timeout: 110_000,
+      ...(opts.maxRetries !== undefined ? { maxRetries: opts.maxRetries } : {}),
+    },
   );
 
   const text = interaction.output_text;

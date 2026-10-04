@@ -17,6 +17,15 @@ export interface GenerateOptions {
   maxTokens?: number;
   /** Overrides the provider's default model for this one call. */
   model?: string;
+  /**
+   * Overrides the SDK's own retry count for this one call. Only meaningful
+   * with a `model` override that has a cross-model fallback behind it
+   * (§5.19 addendum): the SDK's default retries the *same* model with
+   * backoff, which is time well spent when nothing else to try — but wastes
+   * time better spent switching models when the override is the one having
+   * a bad day. Leave unset everywhere else.
+   */
+  maxRetries?: number;
 }
 
 export type Provider = "gemini" | "claude";
@@ -76,6 +85,21 @@ export function isRateLimit(err: unknown): boolean {
   const status = (err as { status?: number } | null)?.status;
   const text = err instanceof Error ? err.message : "";
   return status === 429 || /rate limit|quota|RESOURCE_EXHAUSTED/i.test(text);
+}
+
+/**
+ * Worth trying a different model for, rather than giving up.
+ *
+ * Wider than `isRateLimit`: a 503 ("gemini-3.6-flash is currently
+ * experiencing high demand") is Google's own model having a bad day, not this
+ * app's quota — measured live 2026-10-02/03, both the default model and the
+ * question-route override hit this independently within the same week. A
+ * second model is very unlikely to be having the same bad day at the same
+ * moment, so it is worth one retry before surfacing an error.
+ */
+export function worthRetryingElsewhere(err: unknown): boolean {
+  const status = (err as { status?: number } | null)?.status;
+  return isRateLimit(err) || (typeof status === "number" && status >= 500);
 }
 
 /**

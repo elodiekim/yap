@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { friendlyError, generateJSON, questionModel } from "@/lib/llm";
+import {
+  friendlyError,
+  generateJSON,
+  questionModel,
+  worthRetryingElsewhere,
+} from "@/lib/llm";
 import { PROMPT_SCHEMA } from "@/lib/schemas";
 import {
   QUESTION_SYSTEM,
@@ -66,18 +71,40 @@ export async function POST(req: Request) {
       "Ask your one open-ended question about this topic, with idea hints.",
     );
 
-    const { data: prompt, usage } = await generateJSON<Prompt>({
+    const call = {
       system: easy ? QUESTION_SYSTEM_EASY : QUESTION_SYSTEM,
       user: userParts.join("\n"),
       schema: PROMPT_SCHEMA,
       // "low" was fast but too shallow to catch a repeated hook across a list
       // of past questions — that needs a moment to actually compare them, not
       // just answer. "medium" is what was verified to work (§5.19).
-      effort: "medium",
+      effort: "medium" as const,
       maxTokens: 6000,
-      model: questionModel(),
-    });
+    };
 
+    const override = questionModel();
+    let result;
+    try {
+      // Low retry budget on the override attempt: if it is the one having a
+      // bad day, the time is better spent switching models (below) than
+      // waiting through same-model backoff that measured outages this week
+      // outlasted anyway.
+      result = await generateJSON<Prompt>({
+        ...call,
+        model: override,
+        maxRetries: override ? 1 : undefined,
+      });
+    } catch (err) {
+      // The override model having a bad day (measured live, §5.19 addendum)
+      // is not a reason to lose the question entirely — the plain default
+      // model is very unlikely to be down at the same moment. Only worth
+      // trying when there is actually a different model to fall back to.
+      if (!override || !worthRetryingElsewhere(err)) throw err;
+      console.warn(`[question] ${override} failed, falling back to the default model`, err);
+      result = await generateJSON<Prompt>(call);
+    }
+
+    const { data: prompt, usage } = result;
     logUsage(body.practisedOn ?? today(), "question", usage);
     return NextResponse.json(prompt);
   } catch (err) {
