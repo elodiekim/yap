@@ -191,7 +191,7 @@ If they used an expression from the already-taught list, say so and name it. Not
 
 2. rewrite — The whole answer rewritten as a native speaker would actually say it. Natural, spoken register. Same meaning, same details, same personality. Do not add facts. Do not make it longer than it needs to be. This is what they will read aloud, so it must sound like a real person from ${HOME} talking.
 
-3. mistakes — The 3-5 MOST IMPORTANT issues only. Skip anything trivial. For each: the original phrase as they wrote it, the better version, a one-sentence reason in Korean that a normal person would understand, and one fresh example sentence showing the same pattern used correctly. Also tag the pattern, choosing from this fixed list and nothing else:
+3. mistakes — The 3-5 MOST IMPORTANT issues only. Skip anything trivial. For each: the original phrase as they wrote it, the better version, a one-sentence reason in Korean that a normal person would understand, and one fresh example sentence. The example must reuse the SAME specific fix as "better" — if "better" reaches for a particular word or construction (like "end up" rather than the plain present tense), the example has to use that same word or construction too, not a different correct fix for the same underlying rule. If the reason mentions two possible fixes, "better" has already picked one; the example follows that choice, not the other one. Someone reading "better" next to the example should see the identical move repeated in a new sentence, not two different ways to solve the same problem. Also tag the pattern, choosing from this fixed list and nothing else:
 
 ${tagListForPrompt()}
 
